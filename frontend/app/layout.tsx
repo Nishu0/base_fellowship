@@ -31,11 +31,11 @@ export const metadata: Metadata = {
   ],
   authors: [
     {
-      name: "Nisarg Thakkar",
+      name: "Nisarg Thakkar and Mohit Bhat",
       url: "https://www.nisargthakkar.co/",
     },
   ],
-  creator: "Nisarg",
+  creator: "Nisarg Thakkar and Mohit Bhat",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     title: siteConfig.name,
     description: siteConfig.description,
     images: [siteConfig.ogImage],
-    creator: "Nisarg Thakkar",
+    creator: "Nisarg Thakkar and Mohit Bhat",
   },
   icons: {
     icon: "/favicon.ico",
