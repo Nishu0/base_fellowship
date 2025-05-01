@@ -1,0 +1,109 @@
+{
+  "id": "0x8a23dD123ab45cDeFg789012h3456i7890j123k",
+  "name": "Alex Blockchain",
+  "username": "alexdev",
+  "avatar": "https://github.com/app-generator/static/assets/products/react-code-app-illustration.jpg",
+  "bio": "Blockchain developer specializing in Solidity, Move, and cross-chain applications. Contributor to multiple DeFi and NFT projects.",
+  "location": "San Francisco, CA",
+  "website": "https://alexblockchain.dev",
+  "joinedDate": "2019-03-15",
+  "github": {
+    "username": "alexblockchain",
+    "repos": 47,
+    "followers": 864,
+    "following": 215,
+    "stars": 1256,
+    "contributions": 3421,
+    "score": 92
+  },
+  "social": {
+    "twitter": "alexblockchain",
+    "farcaster": "alexblockchain.eth",
+    "lens": "alexblockchain.lens"
+  },
+  "chains": [
+    {
+      "name": "Ethereum",
+      "logo": "ethereum",
+      "score": 91,
+      "transactions": 328,
+      "contracts": 14,
+      "firstActivity": "2019-05-21"
+    },
+    {
+      "name": "Base",
+      "logo": "base",
+      "score": 85,
+      "transactions": 167,
+      "contracts": 8,
+      "firstActivity": "2022-02-17"
+    }
+  ],
+  "skills": [
+    { "name": "Solidity", "score": 94 },
+    { "name": "CSS", "score": 89 },
+    { "name": "Move", "score": 82 },
+    { "name": "Rust", "score": 79 },
+    { "name": "JavaScript", "score": 88 },
+    { "name": "React", "score": 85 },
+    { "name": "TypeScript", "score": 84 },
+    { "name": "Golang", "score": 92 }
+  ],
+  "projectContributions": [
+    {
+      "name": "DeFi Swap Protocol",
+      "role": "Smart Contract Developer",
+      "description": "Decentralized exchange with optimized routing and price discovery",
+      "score": 91,
+      "url": "https://github.com/defiswaprotocol/core"
+    },
+    {
+      "name": "NFT Marketplace",
+      "role": "Smart Contract Developer",
+      "description": "Gasless NFT marketplace with royalty enforcement",
+      "score": 86,
+      "url": "https://github.com/nftmarketplace/contracts"
+    },
+    {
+      "name": "DAO Governance",
+      "role": "Contributor",
+      "description": "On-chain governance system with snapshot voting",
+      "score": 84,
+      "url": "https://github.com/daogovernance/dao"
+    },
+    {
+      "name": "Cross-Chain Bridge",
+      "role": "Security Contributor",
+      "description": "Zero-knowledge bridge for EVM chains",
+      "score": 89,
+      "url": "https://github.com/crosschainbridge/main"
+    }
+  ],
+  "hackathonWins": [
+    {
+      "name": "ETHGlobal Tokyo",
+      "project": "ZK Identity Verification",
+      "year": 2023,
+      "position": "1st Place"
+    },
+    {
+      "name": "Solana Hackathon",
+      "project": "Decentralized Social Graph",
+      "year": 2022,
+      "position": "2nd Place"
+    },
+    {
+      "name": "ETHDenver",
+      "project": "Interoperable NFT Protocol",
+      "year": 2021,
+      "position": "Finalist"
+    }
+  ],
+  "overallScore": 86,
+  "scoreBreakdown": {
+    "technicalSkills": 92,
+    "projectContributions": 87,
+    "onchainActivity": 78,
+    "Engagement": 83
+  }
+} 

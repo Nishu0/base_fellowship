@@ -31,31 +31,6 @@ export default function Navbar() {
         
         {/* Right side elements */}
         <div className="flex flex-row items-center justify-end gap-1.5 flex-1">
-          {/* Mobile Search Button */}
-          <button 
-            type="button" 
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors duration-100 disabled:pointer-events-none disabled:opacity-50 hover:bg-fd-accent hover:text-fd-accent-foreground p-1.5 [&_svg]:size-5 lg:hidden"
-            data-search=""
-            aria-label="Open Search"
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="lucide p-px"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.3-4.3"></path>
-            </svg>
-          </button>
-          
-          {/* Desktop Search Bar */}
         
           
           {/* Theme Toggle */}
