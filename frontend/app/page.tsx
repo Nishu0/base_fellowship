@@ -51,17 +51,22 @@ export default function Home() {
           </p>
           
           <div className="flex flex-wrap gap-4 justify-center pt-4">
-            <Link href="/get-started">
+            <Link href="/profile/sample">
               <Button className="rounded-full bg-white text-black hover:bg-zinc-200 px-8 py-6 text-lg font-medium">
                 Get Started
               </Button>
             </Link>
-            <Link href="/learn-more">
+            <Link href="/leaderboard">
+              <Button className="rounded-full bg-blue-600 text-white hover:bg-blue-700 px-8 py-6 text-lg font-medium">
+                View Leaderboard
+              </Button>
+            </Link>
+            <Link href="/organizer">
               <Button
                 variant="outline"
                 className="rounded-full border-zinc-800 bg-zinc-950/50 backdrop-blur-sm text-white hover:bg-zinc-900 hover:text-white px-8 py-6 text-lg font-medium"
               >
-                Learn More
+                Organizer View
               </Button>
             </Link>
           </div>

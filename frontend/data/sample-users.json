@@ -11,8 +11,8 @@
     "onchain_score": 87,
     "overall_score": 89,
     "web2_score": 85,
-    "chains": ["Ethereum", "Base", "Arbitrum"],
-    "top_chain": "Ethereum",
+    "chains": ["Eth", "Base", "Arbitrum"],
+    "top_chain": "Eth",
     "hackathon_wins": 3,
     "verified": true
   },
@@ -28,7 +28,7 @@
     "onchain_score": 94,
     "overall_score": 92,
     "web2_score": 91,
-    "chains": ["Ethereum", "Optimism", "Polygon"],
+    "chains": ["Eth", "Optimism", "Polygon"],
     "top_chain": "Optimism",
     "hackathon_wins": 2,
     "verified": true
@@ -62,7 +62,7 @@
     "onchain_score": 92,
     "overall_score": 90,
     "web2_score": 88,
-    "chains": ["Ethereum", "Base", "Arbitrum"],
+    "chains": ["Eth", "Base", "Arbitrum"],
     "top_chain": "Base",
     "hackathon_wins": 1,
     "verified": true
@@ -79,7 +79,7 @@
     "onchain_score": 86,
     "overall_score": 88,
     "web2_score": 94,
-    "chains": ["Ethereum", "zkSync", "StarkNet"],
+    "chains": ["Eth", "zkSync", "StarkNet"],
     "top_chain": "StarkNet",
     "hackathon_wins": 2,
     "verified": true
@@ -96,7 +96,7 @@
     "onchain_score": 79,
     "overall_score": 82,
     "web2_score": 88,
-    "chains": ["Ethereum", "Polygon", "Avalanche"],
+    "chains": ["Eth", "Polygon", "Avalanche"],
     "top_chain": "Polygon",
     "hackathon_wins": 1,
     "verified": false
@@ -113,7 +113,7 @@
     "onchain_score": 83,
     "overall_score": 80,
     "web2_score": 75,
-    "chains": ["Ethereum", "Base", "Optimism"],
+    "chains": ["Eth", "Base", "Optimism"],
     "top_chain": "Base",
     "hackathon_wins": 0,
     "verified": true
@@ -125,12 +125,12 @@
     "avatar": "https://avatars.githubusercontent.com/u/67890",
     "location": "Vancouver, Canada",
     "bio": "Blockchain developer with expertise in ZK proofs",
-    "skills": ["Solidity", "zk-SNARK", "Circom", "TypeScript"],
+    "skills": ["Solidity", "zk-SNARK", "TypeScript", "C++"],
     "github_score": 93,
     "onchain_score": 95,
     "overall_score": 94,
     "web2_score": 89,
-    "chains": ["Ethereum", "zkSync", "Base"],
+    "chains": ["Eth", "zkSync", "Base"],
     "top_chain": "zkSync",
     "hackathon_wins": 4,
     "verified": true
@@ -147,7 +147,7 @@
     "onchain_score": 78,
     "overall_score": 80,
     "web2_score": 86,
-    "chains": ["Ethereum", "Polygon", "Solana"],
+    "chains": ["Eth", "Polygon", "Solana"],
     "top_chain": "Solana",
     "hackathon_wins": 1,
     "verified": false
@@ -176,12 +176,12 @@
     "avatar": "https://avatars.githubusercontent.com/u/90123",
     "location": "Mexico City, Mexico",
     "bio": "Full-stack developer with blockchain expertise",
-    "skills": ["JavaScript", "React", "Node.js", "Solidity"],
+    "skills": ["JavaScript", "Node.js", "Solidity", "React"],
     "github_score": 76,
     "onchain_score": 72,
     "overall_score": 74,
     "web2_score": 81,
-    "chains": ["Ethereum", "Polygon", "Base"],
+    "chains": ["Eth", "Polygon", "Base"],
     "top_chain": "Base",
     "hackathon_wins": 0,
     "verified": false
@@ -198,7 +198,7 @@
     "onchain_score": 93,
     "overall_score": 91,
     "web2_score": 85,
-    "chains": ["Ethereum", "Optimism", "Arbitrum"],
+    "chains": ["Eth", "Optimism", "Arbitrum"],
     "top_chain": "Arbitrum",
     "hackathon_wins": 3,
     "verified": true
@@ -215,7 +215,7 @@
     "onchain_score": 81,
     "overall_score": 80,
     "web2_score": 83,
-    "chains": ["Base", "Ethereum", "Polygon"],
+    "chains": ["Base", "Eth", "Polygon"],
     "top_chain": "Base",
     "hackathon_wins": 1,
     "verified": true
@@ -232,8 +232,8 @@
     "onchain_score": 90,
     "overall_score": 92,
     "web2_score": 88,
-    "chains": ["Ethereum", "Polygon", "Base"],
-    "top_chain": "Ethereum",
+    "chains": ["Eth", "Polygon", "Base"],
+    "top_chain": "Eth",
     "hackathon_wins": 2,
     "verified": true
   },
@@ -249,7 +249,7 @@
     "onchain_score": 76,
     "overall_score": 80,
     "web2_score": 93,
-    "chains": ["Ethereum", "Arbitrum", "Optimism"],
+    "chains": ["Eth", "Arbitrum", "Optimism"],
     "top_chain": "Optimism",
     "hackathon_wins": 1,
     "verified": false

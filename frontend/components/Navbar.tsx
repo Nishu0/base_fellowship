@@ -31,7 +31,15 @@ export default function Navbar() {
         
         {/* Right side elements */}
         <div className="flex flex-row items-center justify-end gap-1.5 flex-1">
-        
+          <Link href="/leaderboard" className="inline-flex items-center gap-2.5 font-semibold">
+            <p className="font-serif text-2xl">Leaderboard</p>
+          </Link>
+          <Link href="/profile/sample" className="inline-flex items-center gap-2.5 font-semibold">
+            <p className="font-serif text-2xl">Profile Tab</p>
+          </Link>
+          <Link href="/organizer" className="inline-flex items-center gap-2.5 font-semibold">
+            <p className="font-serif text-2xl">Organizer Tab</p>
+          </Link>
           
           {/* Theme Toggle */}
           <button 
@@ -145,6 +153,33 @@ export default function Navbar() {
           className="lg:hidden absolute w-full bg-fd-background border-t border-fd-border py-2 px-4 z-50"
         >
           <ul className="space-y-2">
+            <li>
+              <Link 
+                href="/leaderboard" 
+                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Leaderboard
+              </Link>
+            </li>
+            <li>
+              <Link 
+                href="/profile/sample" 
+                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Profile
+              </Link>
+            </li>
+            <li>
+              <Link 
+                href="/organizer" 
+                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Organizer
+              </Link>
+            </li>
             <li>
               <Link 
                 href="https://x.com/" 
