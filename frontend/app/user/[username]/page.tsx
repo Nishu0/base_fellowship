@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import Link from "next/link";
 import { Github, Twitter, Globe, ExternalLink, Star, ChevronDown } from "lucide-react";
+import { useParams } from "next/navigation";
 
-export default function UserProfilePage({ params }: { params: { username: string } }) {
+
+export default function UserProfilePage() {
+  const { username } = useParams();
   const [selectedChain, setSelectedChain] = useState<string | null>(null);
   
   // In a real app, you would fetch the user data based on the username param
