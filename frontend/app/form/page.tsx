@@ -133,8 +133,8 @@ export default function UserDataForm() {
             {/* Twitter Username */}
             <div className="space-y-2">
               <Label htmlFor="twitter" className="flex items-center gap-2">
-                <Twitter size={16} className="text-zinc-400" />
-                X (Twitter) Username
+              <svg width="14" height="14" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.99 0H20.298L13.071 8.26004L21.573 19.5H14.916L9.70202 12.683L3.73597 19.5H0.426L8.15602 10.665L0 0H6.82602L11.539 6.23104L16.99 0ZM15.829 17.52H17.662L5.83002 1.876H3.86297L15.829 17.52Z" fill="#ffffff"></path></svg>
+                Twitter Username
               </Label>
               <div className="relative">
                 <Input
