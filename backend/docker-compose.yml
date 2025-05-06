@@ -1,0 +1,18 @@
+# Run this command to start the database:
+# docker compose up
+services:
+  db:
+    hostname: 127.0.0.1
+    image: pgvector/pgvector:pg16
+    ports:
+      - 5432:5432
+    restart: always
+    environment:
+      - POSTGRES_DB=api
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+  redis:
+    image: redis:7
+    ports:
+      - 6379:6379
+    restart: always
