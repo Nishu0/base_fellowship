@@ -82,6 +82,7 @@ export default function UserProfilePage() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
+        console.log("username", username);
         const response = await api.get(`/fbi/status/${username}`);
         console.log("response", response.data);
         

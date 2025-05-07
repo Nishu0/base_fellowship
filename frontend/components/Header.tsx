@@ -31,7 +31,7 @@ export default function Header() {
       {/* Hero content */}
       <div className="container relative z-10 mx-auto flex flex-col items-center justify-center space-y-8 px-4 text-center max-w-4xl">
         <Badge className="rounded-full border-zinc-800 bg-zinc-900/70 backdrop-blur-sm px-4 py-1 text-white">
-          Onchain Hackathon Selection Platform
+          Builders Directory
         </Badge>
 
         <div className="space-y-4">
@@ -48,11 +48,6 @@ export default function Header() {
           <Link href="/form">
             <Button className="rounded-full bg-white text-black hover:bg-zinc-200 px-8 py-6 text-lg font-medium">
               Get Started
-            </Button>
-          </Link>
-          <Link href="/leaderboard">
-            <Button className="rounded-full bg-blue-600 text-white hover:bg-blue-700 px-8 py-6 text-lg font-medium">
-              View Leaderboard
             </Button>
           </Link>
           <Link href="/organizer">

@@ -3,6 +3,7 @@ import { FbiService } from './fbiService';
 import { AnalyzeUserRequest } from './fbiModel';
 import { analyzeQueue } from './queue';
 import { PrismaClient, DataStatus } from '@prisma/client';
+import { OnchainDataManager } from '@/common/utils/OnchainDataManager';
 
 const prisma = new PrismaClient();
 
@@ -197,4 +198,19 @@ export class FbiController {
             });
         }
     }
+
+    async getETHGlobalCredentials(req: Request, res: Response): Promise<void> {
+        try {
+            const address = req.params.address;
+            const credentials = await OnchainDataManager.getETHGlobalCredentials(address);
+            console.log(credentials);
+            res.status(200).json(credentials);
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
+    
 } 

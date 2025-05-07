@@ -1,4 +1,5 @@
 import { Alchemy, AssetTransfersCategory, Network } from 'alchemy-sdk';
+import { checkCommunityPacks, checkFinalistPacks } from './ethglobalCred';
 
 export class OnchainDataManager {
     private alchemy: Alchemy;
@@ -183,5 +184,28 @@ export class OnchainDataManager {
             console.error('[getContractsDeployedByAddress] Error fetching deployed contracts:', error);
             throw error;
         }
+    }
+
+    static async getETHGlobalCredentials(address: string): Promise<any> {
+        console.log("Getting ETHGlobal credentials for", address);
+        
+        // Run both checks in parallel
+        const [communityPacksResult, finalistPacksResult] = await Promise.all([
+            checkCommunityPacks(address),
+            checkFinalistPacks(address)
+        ]);
+        
+        return {
+            wallet: address,
+            community: {
+                count: communityPacksResult.count,
+                packs: communityPacksResult.results
+            },
+            finalist: {
+                count: finalistPacksResult.count,
+                packs: finalistPacksResult.results
+            },
+            totalPacksCount: communityPacksResult.count + finalistPacksResult.count
+        };
     }
 } 
