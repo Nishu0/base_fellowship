@@ -4,7 +4,7 @@ import SocialGraph from "@/components/SocialGraph";
 export default function Kaito() {
   const users = sampleUsers;
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1600px] mx-auto">
       <h1 className="text-3xl font-bold mb-6">Developer Social Network</h1>
       <SocialGraph users={users} />
     </div>
