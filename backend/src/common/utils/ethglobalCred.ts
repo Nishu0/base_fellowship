@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-const provider = new ethers.JsonRpcProvider('https://opt-mainnet.g.alchemy.com/v2/LQJAkg_rXWdGinhD1VApyddbtt5lBz-R');
+const apiKey = process.env.ALCHEMY_API_KEY;
+const provider = new ethers.JsonRpcProvider(`https://opt-mainnet.g.alchemy.com/v2/${apiKey}`);
 
 const communityPacks = {
     "OG Pack": "0x37C6fe4049c95f80e18C9cDDaA8481742456520B",
