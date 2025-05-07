@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Filter, X } from "lucide-react";
+import * as d3 from "d3";
 
 // Dynamically import ForceGraph2D component (it requires window/document)
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
@@ -67,7 +68,6 @@ export default function SocialGraph({ users }: { users: User[] }) {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [highlightNodes, setHighlightNodes] = useState(new Set<string>());
   const [highlightLinks, setHighlightLinks] = useState(new Set<any>());
-  const [filtersVisible, setFiltersVisible] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     skills: [],
     chains: [],
@@ -275,25 +275,6 @@ export default function SocialGraph({ users }: { users: User[] }) {
     }
   };
   
-  // Toggle filter for skills or chains
-  const toggleFilter = (type: 'skills' | 'chains', value: string) => {
-    setFilters(prev => {
-      const current = [...prev[type]];
-      const index = current.indexOf(value);
-      
-      if (index === -1) {
-        current.push(value);
-      } else {
-        current.splice(index, 1);
-      }
-      
-      return {
-        ...prev,
-        [type]: current
-      };
-    });
-  };
-  
   // Helper to find common elements between two arrays
   const findCommonElements = (arr1: string[], arr2: string[]) => {
     return arr1.filter(item => arr2.includes(item));
@@ -322,24 +303,9 @@ export default function SocialGraph({ users }: { users: User[] }) {
   return (
     <div className="w-full mt-6">
       <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
+        {/* Filters section */}
         
-        {/* Filter button */}
-        <Button 
-          onClick={() => setFiltersVisible(!filtersVisible)}
-          variant="outline"
-          className="flex items-center gap-2 self-start"
-        >
-          <Filter size={16} />
-          Filters
-          <ChevronDown size={16} className={`transition-transform ${filtersVisible ? 'rotate-180' : ''}`} />
-        </Button>
-      </div>
-      
-      {/* Filters panel */}
-      {filtersVisible && (
-        <Card className="p-4 mb-4 bg-zinc-950 border-zinc-800">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold">Filter Developers</h3>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -354,15 +320,44 @@ export default function SocialGraph({ users }: { users: User[] }) {
             {/* Skills filter */}
             <div>
               <h4 className="text-sm font-medium mb-2">Skills</h4>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {allSkills.map(skill => (
+              <select
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !filters.skills.includes(e.target.value)) {
+                    setFilters(prev => ({
+                      ...prev,
+                      skills: [...prev.skills, e.target.value]
+                    }));
+                  }
+                }}
+              >
+                <option value="">Select a skill...</option>
+                {allSkills
+                  .filter(skill => !filters.skills.includes(skill))
+                  .map(skill => (
+                    <option key={skill} value={skill}>{skill}</option>
+                  ))
+                }
+              </select>
+              
+              {/* Selected skills */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {filters.skills.map(skill => (
                   <Badge 
                     key={skill}
-                    variant={filters.skills.includes(skill) ? "default" : "outline"}
+                    variant="default"
                     className="cursor-pointer"
-                    onClick={() => toggleFilter('skills', skill)}
                   >
                     {skill}
+                    <X 
+                      size={14} 
+                      className="ml-1" 
+                      onClick={() => setFilters(prev => ({
+                        ...prev,
+                        skills: prev.skills.filter(s => s !== skill)
+                      }))}
+                    />
                   </Badge>
                 ))}
               </div>
@@ -371,15 +366,44 @@ export default function SocialGraph({ users }: { users: User[] }) {
             {/* Chains filter */}
             <div>
               <h4 className="text-sm font-medium mb-2">Blockchain Experience</h4>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {allChains.map(chain => (
+              <select
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !filters.chains.includes(e.target.value)) {
+                    setFilters(prev => ({
+                      ...prev,
+                      chains: [...prev.chains, e.target.value]
+                    }));
+                  }
+                }}
+              >
+                <option value="">Select a blockchain...</option>
+                {allChains
+                  .filter(chain => !filters.chains.includes(chain))
+                  .map(chain => (
+                    <option key={chain} value={chain}>{chain}</option>
+                  ))
+                }
+              </select>
+              
+              {/* Selected chains */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {filters.chains.map(chain => (
                   <Badge 
                     key={chain}
-                    variant={filters.chains.includes(chain) ? "default" : "outline"}
+                    variant="default"
                     className="cursor-pointer"
-                    onClick={() => toggleFilter('chains', chain)}
                   >
                     {chain}
+                    <X 
+                      size={14} 
+                      className="ml-1" 
+                      onClick={() => setFilters(prev => ({
+                        ...prev,
+                        chains: prev.chains.filter(c => c !== chain)
+                      }))}
+                    />
                   </Badge>
                 ))}
               </div>
@@ -398,8 +422,8 @@ export default function SocialGraph({ users }: { users: User[] }) {
               />
             </div>
           </div>
-        </Card>
-      )}
+       
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main graph */}
@@ -414,9 +438,9 @@ export default function SocialGraph({ users }: { users: User[] }) {
                   ? (node as GraphNode).color || '#6b7280'
                   : 'rgba(160, 160, 160, 0.3)'
               }
-              nodeRelSize={6}
-              nodeVal={(node: any) => (node as GraphNode).size || 5}
-              linkWidth={(link: any) => highlightLinks.has(link) ? 3 : 1}
+              nodeRelSize={10}
+              nodeVal={(node: any) => (node as GraphNode).size || 10}
+              linkWidth={(link: any) => highlightLinks.has(link) ? 3 : 1.5}
               linkColor={(link: any) => {
                 if (highlightLinks.size > 0 && !highlightLinks.has(link)) {
                   return 'rgba(160, 160, 160, 0.1)';
@@ -428,7 +452,7 @@ export default function SocialGraph({ users }: { users: User[] }) {
               nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
                 const typedNode = node as GraphNode;
                 // Draw circular background for avatar
-                const size = (typedNode.size || 5) * (highlightNodes.size === 0 || highlightNodes.has(typedNode.id) ? 1 : 0.8);
+                const size = (typedNode.size || 10) * (highlightNodes.size === 0 || highlightNodes.has(typedNode.id) ? 1 : 0.8);
                 ctx.beginPath();
                 ctx.arc(node.x || 0, node.y || 0, size, 0, 2 * Math.PI);
                 ctx.fillStyle = typedNode.color || '#6b7280';
@@ -446,16 +470,13 @@ export default function SocialGraph({ users }: { users: User[] }) {
                 
                 // Draw node labels for zoomed in nodes
                 const label = typedNode.name;
-                if (globalScale >= 1) {
-                  ctx.font = `${10 / globalScale}px Sans-Serif`;
-                  ctx.textAlign = 'center';
-                  ctx.textBaseline = 'middle';
-                  ctx.fillStyle = 'white';
-                  ctx.fillText(label, node.x || 0, (node.y || 0) + size + (10 / globalScale));
-                }
+                ctx.font = `${12 / globalScale}px Sans-Serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'white';
+                ctx.fillText(label, node.x || 0, (node.y || 0) + size + (16 / globalScale));
               }}
               cooldownTicks={100}
-              cooldownTime={3000}
             />
           </div>
         </div>

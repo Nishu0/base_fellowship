@@ -31,6 +31,15 @@ export default function Navbar() {
         
         {/* Right side elements */}
         <div className="flex flex-row items-center justify-end gap-1.5 flex-1">
+        <Link href="/form" className="inline-flex items-center gap-2.5 font-semibold">
+            <p className="font-serif text-2xl">Form</p>
+          </Link>
+          <Link href="/user/lilycode" className="inline-flex items-center gap-2.5 font-semibold">
+            <p className="font-serif text-2xl">Personal Profile</p>
+          </Link>
+          <Link href="/kaito" className="inline-flex items-center gap-2.5 font-semibold">
+            <p className="font-serif text-2xl">Kaito Social Graph</p>
+          </Link>
           <Link href="/leaderboard" className="inline-flex items-center gap-2.5 font-semibold">
             <p className="font-serif text-2xl">Leaderboard</p>
           </Link>
@@ -153,6 +162,15 @@ export default function Navbar() {
           className="lg:hidden absolute w-full bg-fd-background border-t border-fd-border py-2 px-4 z-50"
         >
           <ul className="space-y-2">
+          <li>
+              <Link 
+                href="/form" 
+                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Form
+              </Link>
+            </li>
             <li>
               <Link 
                 href="/leaderboard" 
