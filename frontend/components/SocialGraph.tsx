@@ -203,18 +203,18 @@ export default function SocialGraph({ users }: { users: User[] }) {
               // Move node i away from j, and j away from i
               if (i === 0) {
                 // Don't move the highest scoring node (center)
-                nodeJ.x += Math.cos(angle) * adjustment;
-                nodeJ.y += Math.sin(angle) * adjustment;
+                nodeJ.x = (nodeJ.x || 0) + Math.cos(angle) * adjustment;
+                nodeJ.y = (nodeJ.y || 0) + Math.sin(angle) * adjustment;
                 
                 // Update fixed positions
                 nodeJ.fx = nodeJ.x;
                 nodeJ.fy = nodeJ.y;
               } else {
                 // Move both nodes in opposite directions by weighted amounts
-                nodeI.x -= Math.cos(angle) * adjustment * weightI;
-                nodeI.y -= Math.sin(angle) * adjustment * weightI;
-                nodeJ.x += Math.cos(angle) * adjustment * weightJ;
-                nodeJ.y += Math.sin(angle) * adjustment * weightJ;
+                nodeI.x = (nodeI.x || 0) - Math.cos(angle) * adjustment * weightI;
+                nodeI.y = (nodeI.y || 0) - Math.sin(angle) * adjustment * weightI;
+                nodeJ.x = (nodeJ.x || 0) + Math.cos(angle) * adjustment * weightJ;
+                nodeJ.y = (nodeJ.y || 0) + Math.sin(angle) * adjustment * weightJ;
                 
                 // Update fixed positions
                 nodeI.fx = nodeI.x;
@@ -346,8 +346,8 @@ export default function SocialGraph({ users }: { users: User[] }) {
         // Calculate the minimum distance needed to avoid collision
         const minDist = node1._nodeSize + node2._nodeSize + 10; // Extra 10px buffer
         // Calculate actual distance between nodes
-        const dx = node2.x - node1.x;
-        const dy = node2.y - node1.y;
+        const dx = (node2.x || 0) - (node1.x || 0);
+        const dy = (node2.y || 0) - (node1.y || 0);
         const actualDist = Math.sqrt(dx * dx + dy * dy);
         return { 
           isColliding: actualDist < minDist,
@@ -395,18 +395,18 @@ export default function SocialGraph({ users }: { users: User[] }) {
               // Move node i away from j, and j away from i
               if (i === 0) {
                 // Don't move the highest scoring node (center)
-                nodeJ.x += Math.cos(angle) * adjustment;
-                nodeJ.y += Math.sin(angle) * adjustment;
+                nodeJ.x = (nodeJ.x || 0) + Math.cos(angle) * adjustment;
+                nodeJ.y = (nodeJ.y || 0) + Math.sin(angle) * adjustment;
                 
                 // Update fixed positions
                 nodeJ.fx = nodeJ.x;
                 nodeJ.fy = nodeJ.y;
               } else {
                 // Move both nodes in opposite directions by weighted amounts
-                nodeI.x -= Math.cos(angle) * adjustment * weightI;
-                nodeI.y -= Math.sin(angle) * adjustment * weightI;
-                nodeJ.x += Math.cos(angle) * adjustment * weightJ;
-                nodeJ.y += Math.sin(angle) * adjustment * weightJ;
+                nodeI.x = (nodeI.x || 0) - Math.cos(angle) * adjustment * weightI;
+                nodeI.y = (nodeI.y || 0) - Math.sin(angle) * adjustment * weightI;
+                nodeJ.x = (nodeJ.x || 0) + Math.cos(angle) * adjustment * weightJ;
+                nodeJ.y = (nodeJ.y || 0) + Math.sin(angle) * adjustment * weightJ;
                 
                 // Update fixed positions
                 nodeI.fx = nodeI.x;
