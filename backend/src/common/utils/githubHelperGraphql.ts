@@ -72,8 +72,9 @@ interface ContributionStats {
       if (to) variables.to = to;
   
       const data = await this.graphqlRequest(query, variables);
-      console.log(data)
+      // console.log(data)
       const collection = data.user.contributionsCollection;
+      // console.log(collection)
   
       const repoContributions: Record<string, number> = {};
       for (const repo of collection.commitContributionsByRepository) {

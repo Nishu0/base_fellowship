@@ -53,6 +53,7 @@ class QueueManager {
      * @param options - Optional worker options
      */
     async registerWorker(processor: (job: Job) => Promise<any>, options?: WorkerOptions): Promise<void> {
+        console.log(this.queueName , "Worker Registered..")
         try {
             this.worker = new Worker(this.queueName, processor, {
                 connection: this.queue.opts.connection,

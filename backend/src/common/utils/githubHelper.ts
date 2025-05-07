@@ -115,15 +115,31 @@ export class GitHubHelper {
     /**
      * Fetch user repos with full details (languages, forks, stars)
      */
-    async fetchUserReposWithDetails(username: string): Promise<any[]> {
+    async fetchUserReposWithDetails(username: string): Promise<any> {
       console.log(`Fetching detailed repository information for user: ${username}`);
       const repos = await this.fetchUserRepos(username);
       console.log(`Processing ${repos.length} repositories for detailed information`);
+
+      let totalForks = 0
+      let totalStars = 0
+      let totalLanguageLinesOfCode: any = {}
       
       const detailedRepos = await Promise.all(
         repos.map(async (repo) => {
           console.log(`Fetching languages for repo: ${repo.full_name}`);
           const languages = await this.fetchRepoLanguages(repo.owner.login, repo.name);
+
+
+          Object.keys(languages).map((langauge) => {
+            if(totalLanguageLinesOfCode[langauge])
+            totalLanguageLinesOfCode[langauge]+= languages[langauge]
+            else
+            totalLanguageLinesOfCode[langauge] = languages[langauge]
+          })
+
+          totalForks += repo.forks_count
+          totalStars += repo.stargazers_count
+
           const detailedRepo = {
             name: repo.name,
             full_name: repo.full_name,
@@ -147,7 +163,7 @@ export class GitHubHelper {
       );
   
       console.log(`Completed fetching detailed information for all ${detailedRepos.length} repositories`);
-      return detailedRepos;
+      return {detailedRepos, totalForks, totalStars, totalLanguageLinesOfCode};
     }
 
     async fetchUserOrganizations(username: string): Promise<any[]> {

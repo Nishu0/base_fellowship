@@ -17,5 +17,8 @@ export const env = cleanEnv(process.env, {
   COMMON_RATE_LIMIT_WINDOW_MS: num({ devDefault: testOnly(1000) }),
   OPENAI_API_KEY: str(),
   ALCHEMY_API_KEY: str(),
-  GITHUB_ACCESS_TOKEN: str()
+  GITHUB_ACCESS_TOKEN: str(),
+  REDIS_HOST: host({ devDefault: testOnly("localhost") }),
+  REDIS_PORT: port({ devDefault: testOnly(6379) }),
+  REDIS_PASSWORD: str({ devDefault: testOnly("") })
 });
