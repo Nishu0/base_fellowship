@@ -1,0 +1,6 @@
+{
+	"dependencies": {
+		"react-force-graph": "^1.47.6",
+		"three": "^0.176.0"
+	}
+}

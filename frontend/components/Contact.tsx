@@ -1,3 +1,4 @@
+"use client"
 import "react-responsive-modal/styles.css";
 import { Modal } from "react-responsive-modal";
 import { useState } from "react";

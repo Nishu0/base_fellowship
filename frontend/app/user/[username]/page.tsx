@@ -6,92 +6,108 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import Link from "next/link";
-import { Github, Twitter, Globe, ExternalLink, Star, ChevronDown } from "lucide-react";
+import { 
+  Github, 
+  Twitter, 
+  Globe, 
+  ExternalLink, 
+  Star, 
+  ChevronDown, 
+  MapPin, 
+  Calendar, 
+  BarChart4, 
+  Code2, 
+  Trophy, 
+  BookOpen,
+  Linkedin,
+  FileCode,
+  Users,
+  GitFork,
+  GitPullRequest,
+  GitCommit,
+  Layers,
+  Share2
+} from "lucide-react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/axiosClient";
 
-// Type definitions for the API response
-interface GitHubUserData {
-  status: string;
-  userData: {
-    avatar_url: string;
-    name: string;
-    login: string;
-    bio: string;
-    location: string;
-    created_at: string;
-    html_url: string;
-    twitter_username: string;
-    followers: number;
-    public_repos: number;
-  };
-  userRepoData: {
-    totalForks: number;
-    totalStars: number;
-    detailedRepos: Array<{
-      name: string;
-      description: string | null;
-      html_url: string;
-      stargazers_count: number;
-      languages: Record<string, number>;
-    }>;
-  };
-  contributionData?: {
-    totalContributions: number;
-    totalPRs: number;
-    totalIssues: number;
-    contributionCalendar: {
-      totalContributions: number;
-      weeks: Array<{
-        contributionDays: Array<{
-          date: string;
-          contributionCount: number;
-        }>;
-      }>;
-    };
-  };
-  onchainHistory?: any[];
-  contractsDeployed?: Array<{
-    address: string;
-    blockNumber: number;
-  }>;
-}
-
-// Types for activity heatmap
-interface ContributionDay {
-  date: string;
-  count: number;
-}
-
-// Types for protocol data
-interface Protocol {
-  name: string;
-  category: string;
-  txCount: number;
-}
-
 export default function UserProfilePage() {
   const { username } = useParams();
+  // Define TypeScript interface for API response
+  interface GitHubUserData {
+    userData: {
+      avatar_url: string;
+      name: string;
+      login: string;
+      bio: string;
+      location: string;
+      created_at: string;
+      html_url: string;
+      twitter_username: string;
+      email: string;
+      blog: string;
+      followers: number;
+      public_repos: number;
+    };
+    userRepoData: {
+      totalForks: number;
+      totalStars: number;
+      detailedRepos: Array<{
+        name: string;
+        description: string | null;
+        html_url: string;
+        stargazers_count: number;
+        forks_count: number; 
+        languages: Record<string, number>;
+      }>;
+    };
+    contributionData?: {
+      totalContributions: number;
+      totalPRs: number;
+      totalIssues: number;
+      contributionCalendar: {
+        totalContributions: number;
+        weeks: Array<{
+          contributionDays: Array<{
+            date: string;
+            contributionCount: number;
+          }>;
+        }>;
+      };
+    };
+    onchainHistory?: Record<string, any[]>;
+    contractsDeployed?: Record<string, any[]>;
+    score?: {
+      totalScore: number;
+      metrics: {
+        web2: {
+          total: number;
+          [key: string]: any;
+        };
+        web3: {
+          total: number;
+          [key: string]: any;
+        };
+      };
+    };
+  }
+
   const [userData, setUserData] = useState<GitHubUserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedChain, setSelectedChain] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
   
   // Fetch user data from API
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        console.log("username", username);
         const response = await api.get(`/fbi/status/${username}`);
-        console.log("response", response.data);
         
-        // Make sure the data has the expected structure
         if (!response.data?.data?.userData) {
           throw new Error("API response missing expected data structure");
         }
         
-        // Store the nested data object, not the wrapper
         setUserData(response.data.data);
         setError("");
       } catch (err) {
@@ -107,99 +123,7 @@ export default function UserProfilePage() {
     }
   }, [username]);
 
-  // Process onchain transaction data
-  const processOnchainData = () => {
-    console.log("ud", userData);
-    if (!userData?.onchainHistory || !Array.isArray(userData.onchainHistory)) {
-      return {
-        transactionsByDay: [] as number[],
-        transactionMonths: [] as string[],
-        totalTransactions: 0,
-        wallets: [] as string[],
-        protocols: [] as Protocol[]
-      };
-    }
-    console.log("userData.onchainHistory",userData.onchainHistory);
-
-    // Count transactions by wallet address
-    const transactions = userData.onchainHistory;
-    const totalTransactions = transactions.length;
-    
-    // Get unique wallet addresses
-    const uniqueWallets = new Set<string>();
-    transactions.forEach(tx => {
-      if (tx.from) uniqueWallets.add(tx.from);
-      if (tx.to) uniqueWallets.add(tx.to);
-    });
-    const wallets = Array.from(uniqueWallets).filter(Boolean);
-    
-    // Group transactions by date
-    const txByDate = transactions.reduce((acc, tx) => {
-      // Convert block number to approximate date
-      // This is a simplification - ideally you'd have timestamps
-      const blockNum = parseInt(tx.blockNum || '0', 16);
-      // Create a pseudo-date - this is just for demo purposes
-      const pseudoDate = new Date();
-      pseudoDate.setDate(pseudoDate.getDate() - (Math.floor(Math.random() * 60))); // Random date in last 60 days
-      
-      const dateKey = pseudoDate.toISOString().split('T')[0];
-      
-      if (!acc[dateKey]) {
-        acc[dateKey] = 0;
-      }
-      acc[dateKey]++;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    // Sort dates and get last 52 weeks (364 days)
-    const sortedDates = Object.keys(txByDate).sort();
-    
-    // Generate array of zeros for the last 364 days
-    const today = new Date();
-    const transactionsByDay: number[] = [];
-    const dateSet = new Set<string>();
-    
-    for (let i = 0; i < 364; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() - (364 - i - 1));
-      const dateStr = date.toISOString().split('T')[0];
-      dateSet.add(date.toLocaleString('default', { month: 'short' }));
-      transactionsByDay.push(txByDate[dateStr] || 0);
-    }
-    
-    // Get protocol info (for this example, we'll create some mock data based on real addresses)
-    const protocolMap: Record<string, { name: string, category: string, count: number }> = {
-      "0x9f042060df098ad0c853964679175a7dd3792250": { name: "Smart Contract 1", category: "DeFi", count: 0 },
-      "0x1421db7aa92b81e1c194d6dfc38cc7cd31f7df73": { name: "Smart Contract 2", category: "NFT", count: 0 },
-      "0x70e9bddfd10ac5ecaf6cfb3f34a2681985e4b668": { name: "Smart Contract 3", category: "Exchange", count: 0 },
-    };
-    
-    // Count transactions to known protocol addresses
-    transactions.forEach(tx => {
-      if (tx.to && protocolMap[tx.to]) {
-        protocolMap[tx.to].count++;
-      }
-    });
-    
-    // Convert to array and filter out zero counts
-    const protocols = Object.values(protocolMap)
-      .filter(p => p.count > 0)
-      .map(p => ({
-        name: p.name,
-        category: p.category,
-        txCount: p.count
-      }));
-    
-    return {
-      transactionsByDay,
-      transactionMonths: Array.from(dateSet),
-      totalTransactions,
-      wallets,
-      protocols
-    };
-  };
-
-  // Transform API data for the heatmap
+  // Transform GitHub activity data for the heatmap
   const getGithubActivityData = () => {
     if (!userData?.contributionData?.contributionCalendar) {
       return { 
@@ -217,7 +141,7 @@ export default function UserProfilePage() {
     );
 
     // Extract month names from dates
-    const months = new Set<string>();
+    const months = new Set();
     calendar.weeks.flatMap(week => week.contributionDays).forEach(day => {
       const date = new Date(day.date);
       const monthName = date.toLocaleString('default', { month: 'short' });
@@ -237,37 +161,116 @@ export default function UserProfilePage() {
     
     return userData.userRepoData.detailedRepos
       .sort((a, b) => b.stargazers_count - a.stargazers_count)
-      .slice(0, 3)
+      .slice(0, 5)
       .map(repo => ({
         name: repo.name,
         description: repo.description || "No description",
         stars: repo.stargazers_count,
-        url: repo.html_url
+        forks: repo.forks_count,
+        url: repo.html_url,
+        languages: repo.languages || {}
       }));
   };
 
-  // Calculate GitHub score based on various metrics
-  const calculateGithubScore = () => {
-    if (!userData) return 0;
+  // Get user's top languages across all repos
+  const getTopLanguages = () => {
+    if (!userData?.userRepoData?.detailedRepos) return [];
     
-    // Use other metrics to calculate score
-    const followers = userData.userData.followers || 0;
-    const repos = userData.userData.public_repos || 0;
-    const stars = userData.userRepoData.totalStars || 0;
+    const languageTotals: Record<string, number> = {};
     
-    // Calculate score based on followers, repos, and stars - just a simple example formula
-    const score = followers * 0.4 + repos * 0.3 + stars * 0.3;
-    return Math.min(Math.round(score / 10), 100); // Cap at 100
+    // Aggregate all languages across repos
+    userData.userRepoData.detailedRepos.forEach(repo => {
+      Object.entries(repo.languages || {}).forEach(([lang, bytes]) => {
+        languageTotals[lang] = (languageTotals[lang] || 0) + bytes;
+      });
+    });
+    
+    // Convert to array and sort
+    return Object.entries(languageTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, bytes]) => ({
+        name,
+        bytes,
+        percentage: 0 // Will calculate below
+      }));
   };
 
-  // Calculate onchain score based on transaction activity
-  const calculateOnchainScore = (totalTransactions: number) => {
-    if (totalTransactions <= 0) return 0;
+  // Process onchain data
+  const processOnchainData = () => {
+    if (!userData?.onchainHistory || Object.keys(userData.onchainHistory).length === 0) {
+      return {
+        totalTransactions: 0,
+        chains: []
+      };
+    }
+
+    const transactions = [];
+    const chains: { name: string, transactions: number, contracts: number, score: number, firstActivity: string | null }[] = [];
     
-    // Simple scoring algorithm based on transaction count
-    // Adjust these thresholds based on your expectations
-    const score = Math.min(totalTransactions * 2, 100);
-    return Math.round(score);
+    // Process transactions from each chain
+    Object.entries(userData.onchainHistory).forEach(([chainName, txs]) => {
+      if (!Array.isArray(txs) || txs.length === 0) return;
+      
+      // Add transactions
+      transactions.push(...txs);
+      
+      // Create chain data
+      const txCount = txs.length;
+      const contractCount = userData.contractsDeployed?.[chainName]?.length || 0;
+      
+      // Get first activity date
+      const dates = txs.map(tx => new Date(tx.date)).sort((a, b) => a.getTime() - b.getTime());
+      const firstActivity = dates.length > 0 ? dates[0].toISOString() : null;
+      
+      chains.push({
+        name: chainName.replace('-', ' ').replace(/^\w/, c => c.toUpperCase()),
+        transactions: txCount,
+        contracts: contractCount,
+        score: Math.min(Math.round(txCount * 2), 100), // Simple scoring
+        firstActivity
+      });
+    });
+    
+    return {
+      totalTransactions: transactions.length,
+      chains
+    };
+  };
+
+  // Calculate scores
+  const calculateScores = () => {
+    if (!userData) return { github: 0, onchain: 0, web2: 0, overall: 0 };
+    
+    const githubScore = userData.score?.metrics?.web2?.total 
+      ? Math.round(userData.score.metrics.web2.total) 
+      : 0;
+    
+    const onchainScore = userData.score?.metrics?.web3?.total 
+      ? Math.round(userData.score.metrics.web3.total) 
+      : 0;
+    
+    // Default a baseline web2 score if not available
+    const web2Score = userData.score?.metrics?.web2?.total 
+      ? Math.round(userData.score.metrics.web2.total) 
+      : 70;
+    
+    // Calculate overall score
+    const overall = Math.round((githubScore + onchainScore + web2Score) / 3);
+    
+    return {
+      github: githubScore,
+      onchain: onchainScore,
+      web2: web2Score,
+      overall
+    };
+  };
+
+  // Format date
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
   // Loading state
@@ -300,17 +303,15 @@ export default function UserProfilePage() {
   // Get transformed data
   const githubActivity = getGithubActivityData();
   const topRepos = getTopRepos();
-  const githubScore = calculateGithubScore();
-
-  // Process onchain data
+  const topLanguages = getTopLanguages();
+  const scores = calculateScores();
   const onchainData = processOnchainData();
-  const onchainScore = calculateOnchainScore(onchainData.totalTransactions);
 
-  // Format date
-  const formatJoinDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
+  // Calculate total bytes for languages to get percentages
+  const totalLanguageBytes = topLanguages.reduce((sum, lang) => sum + lang.bytes, 0);
+  topLanguages.forEach(lang => {
+    lang.percentage = Math.round((lang.bytes / totalLanguageBytes) * 100);
+  });
 
   // Create user object from API data
   const user = {
@@ -319,336 +320,593 @@ export default function UserProfilePage() {
     avatar: userData.userData.avatar_url,
     bio: userData.userData.bio || "",
     location: userData.userData.location || "Unknown",
-    joinedDate: formatJoinDate(userData.userData.created_at),
+    joinedDate: formatDate(userData.userData.created_at),
     twitter: userData.userData.twitter_username,
+    email: userData.userData.email,
+    blogUrl: userData.userData.blog,
     verified: true,
-    hackathonWins: 0, // Not available in API data
-    skills: Object.keys(
-      userData.userRepoData.detailedRepos.reduce((langs, repo) => {
-        Object.keys(repo.languages || {}).forEach(lang => {
-          langs[lang] = true;
-        });
-        return langs;
-      }, {} as Record<string, boolean>)
-    ).slice(0, 10),
-    scores: {
-      github: githubScore,
-      onchain: onchainScore,
-      web2: 0, // Not available in API data
-      overall: Math.round((githubScore + onchainScore) / 2) // Average of GitHub and onchain scores
-    },
-    chains: [
-      { name: "Ethereum", transactions: onchainData.totalTransactions, score: onchainScore, maxScore: 100 }
-    ],
-    wallets: onchainData.wallets,
+    githubUrl: userData.userData.html_url,
+    skills: topLanguages.map(lang => lang.name),
+    scores,
+    chains: onchainData.chains,
     githubActivity: {
       contributionsByDay: githubActivity.contributionsByDay,
       contributionMonths: githubActivity.contributionMonths,
       totalContributions: githubActivity.totalContributions,
-      topRepos
+      topRepos,
+      followers: userData.userData.followers,
+      repos: userData.userData.public_repos,
+      stars: userData.userRepoData.totalStars || 0,
+      forks: userData.userRepoData.totalForks || 0,
+      contributions: githubActivity.totalContributions,
+      prs: userData.contributionData?.totalPRs || 0,
+      issues: userData.contributionData?.totalIssues || 0
     },
     onchainActivity: {
-      transactionsByDay: onchainData.transactionsByDay,
-      transactionMonths: onchainData.transactionMonths,
       totalTransactions: onchainData.totalTransactions,
-      topProtocols: onchainData.protocols
+      chains: onchainData.chains
     }
   };
 
-  // Filter chains based on selection
-  const filteredChains = selectedChain 
-    ? user.chains.filter(chain => chain.name === selectedChain)
-    : user.chains;
-
   return (
-    <div className="min-h-screen bg-black text-white pb-12">
-      {/* Profile Header */}
-      <div className="relative mb-4">
-        {/* Cover background */}
-        <div className="h-10"></div>
+    <main className="bg-black min-h-screen text-white">
+      {/* Hero section with unified header */}
+      <section className="relative pt-10 pb-6">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/20 to-black z-0"></div>
         
-        {/* Profile info */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
-          <div className="flex flex-col md:flex-row items-start gap-4">
-            <div className="relative">
-              <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-black">
-                <Image
-                  src={user.avatar}
-                  alt={user.name}
-                  width={128}
-                  height={128}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-lg font-semibold rounded-full w-10 h-10 flex items-center justify-center border-4 border-black">
-                {user.scores.overall}
-              </div>
-            </div>
-            
-            <div className="flex-1 pt-2 md:pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold flex items-center">
-                  {user.name}
-                  {user.verified && (
-                    <svg className="w-6 h-6 ml-2 text-blue-500" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
-                    </svg>
-                  )}
-                </h1>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-zinc-800 text-zinc-200">@{user.username}</Badge>
-                  <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/40">
-                    <Star className="mr-1 h-3 w-3" /> {user.hackathonWins} Wins
-                  </Badge>
-                </div>
-              </div>
-              
-              <p className="text-zinc-300 mb-3">{user.bio}</p>
-              
-              <div className="flex flex-wrap gap-2 mb-3">
-                {user.skills.map(skill => (
-                  <Badge key={skill} className="bg-zinc-800 text-zinc-200">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex items-center gap-4 text-sm text-zinc-400">
-                <div className="flex items-center">
-                  <Globe className="h-4 w-4 mr-1" />
-                  {user.location}
-                </div>
-                <div>Joined {user.joinedDate}</div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 mt-4 md:mt-10">
-              <div className="flex gap-2">
-                {user.twitter && (
-                  <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
-                    <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
-                      <Twitter className="h-4 w-4 mr-2" />
-                      Twitter
-                    </Button>
-                  </Link>
-                )}
-                <Link href={`https://github.com/${user.username}`} target="_blank">
-                  <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
-                    <Github className="h-4 w-4 mr-2" />
-                    GitHub
-                  </Button>
-                </Link>
-              </div>
-              <Link href="/form">
-                <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column - Scores */}
-          <div className="space-y-6">
-            {/* Score Overview */}
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
-              <h2 className="text-lg font-semibold mb-4">Score Overview</h2>
-              
-              <div className="space-y-5">
-                {/* Overall Score */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-zinc-400">Overall Score</span>
-                    <span className="font-medium">{user.scores.overall}/100</span>
-                  </div>
-                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full"
-                      style={{ width: `${user.scores.overall}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                {/* GitHub Score */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-zinc-400">GitHub Score</span>
-                    <span className="font-medium">{user.scores.github}/100</span>
-                  </div>
-                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-purple-500 rounded-full"
-                      style={{ width: `${user.scores.github}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                {/* Onchain Score */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-zinc-400">Onchain Score</span>
-                    <span className="font-medium">{user.scores.onchain}/100</span>
-                  </div>
-                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${user.scores.onchain}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                {/* Web2 Score */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-zinc-400">Web2 Score</span>
-                    <span className="font-medium">{user.scores.web2}/100</span>
-                  </div>
-                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full"
-                      style={{ width: `${user.scores.web2}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Blockchain Scores */}
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Chain Activity</h2>
-                
-                <div className="relative">
-                  <select 
-                    className="bg-zinc-900 border border-zinc-700 rounded-lg text-sm py-1 pl-3 pr-8 appearance-none"
-                    value={selectedChain || ""}
-                    onChange={(e) => setSelectedChain(e.target.value || null)}
-                  >
-                    <option value="">All Chains</option>
-                    {user.chains.map(chain => (
-                      <option key={chain.name} value={chain.name}>{chain.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-400" />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                {filteredChains.map(chain => (
-                  <div key={chain.name}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-zinc-300">{chain.name}</span>
-                      <div className="text-sm text-zinc-400">{chain.transactions} tx</div>
+        <div className="container max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            {/* Left Column - Profile image and stats */}
+            <div className="w-full md:w-1/3 lg:w-1/4 space-y-6">
+              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-4">
+                    <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-zinc-800">
+                      <Image
+                        src={user.avatar}
+                        alt={user.name}
+                        width={112}
+                        height={112}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
+                    <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-lg font-semibold rounded-full w-10 h-10 flex items-center justify-center border-4 border-black">
+                      {user.scores.overall}
+                    </div>
+                  </div>
+                  
+                  <h1 className="text-xl font-bold">{user.name}</h1>
+                  <p className="text-sm text-zinc-400 mb-3">@{user.username}</p>
+                  
+                  <div className="flex gap-2 mb-4 w-full justify-center">
+                    {user.twitter && (
+                      <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
+                        <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700">
+                          <Twitter className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                    <Link href={`https://github.com/${user.username}`} target="_blank">
+                      <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700">
+                        <Github className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="w-full space-y-3">
+                    {user.location && (
+                      <div className="flex items-center text-sm">
+                        <MapPin className="h-4 w-4 mr-2 text-zinc-500" />
+                        <span className="text-zinc-300">{user.location}</span>
+                      </div>
+                    )}
+                    {user.joinedDate && (
+                      <div className="flex items-center text-sm">
+                        <Calendar className="h-4 w-4 mr-2 text-zinc-500" />
+                        <span className="text-zinc-300">Joined {user.joinedDate}</span>
+                      </div>
+                    )}
+                    {user.blogUrl && (
+                      <div className="flex items-center text-sm">
+                        <Globe className="h-4 w-4 mr-2 text-zinc-500" />
+                        <a href={user.blogUrl} target="_blank" rel="noopener noreferrer" 
+                           className="text-zinc-300 hover:text-indigo-400 truncate">
+                          {user.blogUrl.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Score Overview Card */}
+              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-4">Score Overview</h2>
+                
+                <div className="space-y-5">
+                  {/* Overall Score */}
+                  <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-zinc-500">Score: {chain.score}/{chain.maxScore}</span>
+                      <span className="text-zinc-400">Overall Score</span>
+                      <span className="font-medium">{user.scores.overall}/100</span>
+                    </div>
+                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full"
+                        style={{ width: `${user.scores.overall}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* GitHub Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">GitHub Score</span>
+                      <span className="font-medium">{user.scores.github}/100</span>
+                    </div>
+                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-purple-500 rounded-full"
+                        style={{ width: `${user.scores.github}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* Onchain Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Onchain Score</span>
+                      <span className="font-medium">{user.scores.onchain}/100</span>
                     </div>
                     <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${(chain.score / chain.maxScore) * 100}%` }}
+                        style={{ width: `${user.scores.onchain}%` }}
                       ></div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Wallet Addresses */}
-            {user.wallets.length > 0 && (
-              <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
-                <h2 className="text-lg font-semibold mb-4">Wallet Addresses</h2>
-                <div className="space-y-3">
-                  {user.wallets.map((wallet, index) => (
-                    <div key={index} className="bg-zinc-900 rounded-lg p-3 break-all text-sm text-zinc-300">
-                      {wallet}
+                  
+                  {/* Web2 Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Web2 Score</span>
+                      <span className="font-medium">{user.scores.web2}/100</span>
                     </div>
-                  ))}
+                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-green-500 rounded-full"
+                        style={{ width: `${user.scores.web2}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-          
-          {/* Right Column - Activity */}
-          <div className="md:col-span-2 space-y-6">
-            {/* GitHub Activity */}
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5 overflow-hidden">
-              <h2 className="text-lg font-semibold mb-4">GitHub Activity</h2>
               
-              <div className="w-full">
-                <ActivityHeatmap
-                  data={user.githubActivity.contributionsByDay}
-                  months={user.githubActivity.contributionMonths}
-                  colorScheme="github"
-                  title="GitHub Contributions"
-                  totalCount={user.githubActivity.totalContributions}
-                />
-              </div>
-              
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Repositories</h3>
-                <div className="space-y-3">
-                  {user.githubActivity.topRepos.map((repo, index) => (
-                    <div key={index} className="bg-zinc-900 rounded-lg p-3">
-                      <div className="flex justify-between items-start">
-                        <div className="font-medium">{repo.name}</div>
-                        <div className="flex items-center text-sm text-yellow-500">
-                          <Star className="h-4 w-4 mr-1" />
-                          {repo.stars}
-                        </div>
+              {/* Blockchain Scores Card */}
+              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-semibold">Chain Activity</h2>
+                </div>
+                
+                <div className="space-y-4">
+                  {user.chains.map(chain => (
+                    <div key={chain.name}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-zinc-300">{chain.name}</span>
+                        <div className="text-sm text-zinc-400">{chain.transactions} tx</div>
                       </div>
-                      <p className="text-sm text-zinc-400 mt-1">{repo.description}</p>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-zinc-500">Score: {chain.score}/100</span>
+                      </div>
+                      <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500 rounded-full"
+                          style={{ width: `${(chain.score / 100) * 100}%` }}
+                        ></div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
             
-            {/* Onchain Activity */}
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5 overflow-hidden">
-              <h2 className="text-lg font-semibold mb-4">Onchain Activity</h2>
+            {/* Right Column - Main content area */}
+            <div className="w-full md:w-2/3 lg:w-3/4 space-y-6">
+              {/* Bio Section */}
+              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                <p className="text-zinc-300 mb-4">{user.bio}</p>
+                
+                <div className="flex flex-wrap gap-2">
+                  {user.skills.map(skill => (
+                    <Badge key={skill} className="bg-zinc-800 text-zinc-200">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
               
-              {user.onchainActivity.totalTransactions > 0 ? (
+              {/* Tabs navigation */}
+              <div className="flex overflow-x-auto space-x-2 pb-2">
+                <Button 
+                  variant={activeTab === "overview" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("overview")}
+                  className={`rounded-full px-6 ${activeTab === "overview" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                >
+                  Overview
+                </Button>
+                <Button 
+                  variant={activeTab === "github" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("github")}
+                  className={`rounded-full px-6 ${activeTab === "github" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                >
+                  GitHub
+                </Button>
+                <Button 
+                  variant={activeTab === "chains" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("chains")}
+                  className={`rounded-full px-6 ${activeTab === "chains" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                >
+                  Chains
+                </Button>
+                <Button 
+                  variant={activeTab === "skills" ? "default" : "outline"} 
+                  onClick={() => setActiveTab("skills")}
+                  className={`rounded-full px-6 ${activeTab === "skills" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                >
+                  Skills
+                </Button>
+              </div>
+              
+              {/* Tab content */}
+              {activeTab === "overview" && (
                 <>
+                  {/* GitHub stats card */}
+                  <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center">
+                        <Github className="h-5 w-5 mr-2 text-blue-400" />
+                        <h2 className="text-lg font-bold">GitHub Activity</h2>
+                      </div>
+                      <Badge className="bg-blue-900/70 text-blue-300 border-blue-700">
+                        Score: {user.scores.github}/100
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-5">
+                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.githubActivity.repos}</div>
+                        <div className="text-xs text-zinc-400">Repositories</div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.githubActivity.followers}</div>
+                        <div className="text-xs text-zinc-400">Followers</div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.githubActivity.stars}</div>
+                        <div className="text-xs text-zinc-400">Stars</div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.githubActivity.forks}</div>
+                        <div className="text-xs text-zinc-400">Forks</div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.githubActivity.prs}</div>
+                        <div className="text-xs text-zinc-400">Pull Requests</div>
+                      </div>
+                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.githubActivity.contributions}</div>
+                        <div className="text-xs text-zinc-400">Contributions</div>
+                      </div>
+                    </div>
+                    
+                    {/* GitHub heatmap */}
+                    <div className="w-full pt-3">
+                      <ActivityHeatmap
+                        data={user.githubActivity.contributionsByDay}
+                        months={user.githubActivity.contributionMonths as string[]}
+                        colorScheme="github"
+                        title="GitHub Contributions"
+                        totalCount={user.githubActivity.totalContributions}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Blockchain activity card */}
+                  <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center">
+                        <BarChart4 className="h-5 w-5 mr-2 text-indigo-400" />
+                        <h2 className="text-lg font-bold">Blockchain Activity</h2>
+                      </div>
+                      <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
+                        Score: {user.scores.onchain}/100
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {user.chains.length > 0 ? (
+                        user.chains.map((chain) => (
+                          <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center mr-3">
+                                  <span>{chain.name.charAt(0)}</span>
+                                </div>
+                                <h3 className="font-medium">{chain.name}</h3>
+                              </div>
+                              <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
+                                Score: {chain.score}/100
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
+                                  <div className="text-xs text-zinc-400">Transactions</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-indigo-400">{chain.contracts}</div>
+                                  <div className="text-xs text-zinc-400">Contracts</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-indigo-400">
+                                    {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {year: 'numeric', month: 'short'}) : 'N/A'}
+                                  </div>
+                                  <div className="text-xs text-zinc-400">First Activity</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-zinc-500">
+                          <p>No blockchain activity data available</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === "github" && (
+                <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6 overflow-hidden">
+                  <h2 className="text-lg font-semibold mb-4">GitHub Activity</h2>
+                  
                   <div className="w-full">
                     <ActivityHeatmap
-                      data={user.onchainActivity.transactionsByDay}
-                      months={user.onchainActivity.transactionMonths}
-                      colorScheme="onchain"
-                      title="Transaction Activity"
-                      totalCount={user.onchainActivity.totalTransactions}
+                      data={user.githubActivity.contributionsByDay}
+                      months={user.githubActivity.contributionMonths as string[]}
+                      colorScheme="github"
+                      title="GitHub Contributions"
+                      totalCount={user.githubActivity.totalContributions}
                     />
                   </div>
                   
-                  <div className="mt-6">
-                    <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Protocols</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {user.onchainActivity.topProtocols.map((protocol, index) => (
-                        <div key={index} className="bg-zinc-900 rounded-lg p-3">
-                          <div className="font-medium">{protocol.name}</div>
-                          <div className="flex justify-between mt-1">
-                            <span className="text-sm text-zinc-400">{protocol.category}</span>
-                            <span className="text-sm text-zinc-300">{protocol.txCount} tx</span>
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-zinc-300 mb-3">GitHub Stats</h3>
+                      <div className="space-y-3">
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <GitFork className="h-4 w-4 mr-2 text-zinc-400" />
+                              <span className="text-sm">Forks</span>
+                            </div>
+                            <span className="text-indigo-400 font-medium">{user.githubActivity.forks}</span>
+                          </div>
+                        </div>
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <Star className="h-4 w-4 mr-2 text-zinc-400" />
+                              <span className="text-sm">Stars</span>
+                            </div>
+                            <span className="text-indigo-400 font-medium">{user.githubActivity.stars}</span>
+                          </div>
+                        </div>
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <GitPullRequest className="h-4 w-4 mr-2 text-zinc-400" />
+                              <span className="text-sm">Pull Requests</span>
+                            </div>
+                            <span className="text-indigo-400 font-medium">{user.githubActivity.prs}</span>
+                          </div>
+                        </div>
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <GitCommit className="h-4 w-4 mr-2 text-zinc-400" />
+                              <span className="text-sm">Issues</span>
+                            </div>
+                            <span className="text-indigo-400 font-medium">{user.githubActivity.issues}</span>
+                          </div>
+                        </div>
+                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <Users className="h-4 w-4 mr-2 text-zinc-400" />
+                              <span className="text-sm">Followers</span>
+                            </div>
+                            <span className="text-indigo-400 font-medium">{user.githubActivity.followers}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Repositories</h3>
+                      <div className="space-y-3">
+                        {user.githubActivity.topRepos.map((repo, index) => (
+                          <div key={index} className="bg-zinc-800/50 rounded-lg p-3">
+                            <div className="font-medium mb-1 truncate">{repo.name}</div>
+                            <p className="text-xs text-zinc-400 mb-2 line-clamp-2">{repo.description}</p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div className="flex items-center text-xs text-yellow-500">
+                                  <Star className="h-3 w-3 mr-1" />
+                                  {repo.stars}
+                                </div>
+                                <div className="flex items-center text-xs text-purple-500">
+                                  <GitFork className="h-3 w-3 mr-1" />
+                                  {repo.forks}
+                                </div>
+                              </div>
+                              <a 
+                                href={repo.url} 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-indigo-400 hover:underline flex items-center"
+                              >
+                                View
+                                <ExternalLink className="ml-1 h-3 w-3" />
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "chains" && (
+                <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                  <h2 className="text-lg font-semibold mb-4">Blockchain Activity</h2>
+                  
+                  {user.onchainActivity.totalTransactions > 0 ? (
+                    <>
+                      <div className="space-y-5">
+                        {user.chains.map((chain) => (
+                          <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center mr-3">
+                                  <span>{chain.name.charAt(0)}</span>
+                                </div>
+                                <h3 className="font-medium">{chain.name}</h3>
+                              </div>
+                              <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
+                                Score: {chain.score}/100
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
+                                  <div className="text-xs text-zinc-400">Transactions</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-indigo-400">{chain.contracts}</div>
+                                  <div className="text-xs text-zinc-400">Contracts</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-indigo-400">
+                                    {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {year: 'numeric', month: 'short'}) : 'N/A'}
+                                  </div>
+                                  <div className="text-xs text-zinc-400">First Activity</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-zinc-500">
+                      <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No blockchain activity data available</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "skills" && (
+                <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center">
+                      <Code2 className="h-5 w-5 mr-2 text-purple-400" />
+                      <h2 className="text-lg font-bold">Skills & Expertise</h2>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-5">
+                    <h3 className="text-sm font-medium mb-3">Programming Languages</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {topLanguages.map((lang, index) => (
+                        <div key={lang.name} className="bg-zinc-800/50 rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span>{lang.name}</span>
+                            <span className="text-sm font-medium text-purple-400">{lang.percentage}%</span>
+                          </div>
+                          <div className="w-full bg-zinc-700/50 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className="bg-purple-500 h-full rounded-full" 
+                              style={{ width: `${lang.percentage}%` }}
+                            ></div>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="text-center py-12 text-zinc-500">
-                  <p>No onchain activity data available</p>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">GitHub Repositories by Language</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {topRepos.map((repo, index) => (
+                        <div key={repo.name} className="bg-zinc-800/50 rounded-lg p-4">
+                          <div className="font-medium mb-1">{repo.name}</div>
+                          <p className="text-xs text-zinc-400 mb-3 line-clamp-2">{repo.description}</p>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {Object.keys(repo.languages).slice(0, 3).map(lang => (
+                              <Badge key={lang} className="bg-zinc-900 text-zinc-300 font-normal text-xs">
+                                {lang}
+                              </Badge>
+                            ))}
+                            {Object.keys(repo.languages).length > 3 && (
+                              <Badge className="bg-zinc-900 text-zinc-300 font-normal text-xs">
+                                +{Object.keys(repo.languages).length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+      
+      {/* Actions footer */}
+      <section className="py-5 border-t border-zinc-900">
+        <div className="container max-w-6xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-center md:text-left">
+              <h3 className="text-lg font-bold">Interested in this builder?</h3>
+              <p className="text-zinc-400 text-sm">Contact directly or share their profile</p>
+            </div>
+            <div className="flex gap-4">
+              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800">
+                <Share2 className="mr-2 h-4 w-4" />
+                Share Profile
+              </Button>
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                Contact Builder
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
-} 
+}
