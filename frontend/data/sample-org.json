@@ -1,0 +1,209 @@
+{
+    "organization": {
+      "id": "fbi-001",
+      "name": "FBI: Farcaster Builders India",
+      "description": "Farcaster Builders India - A collective of Indian founders, builders, and operators obsessed with building on top and accelerating the Superchain.",
+      "logo": "https://images.spr.so/cdn-cgi/imagedelivery/j42No7y-dcokJuNgXeA0ig/1eafd763-e8a0-451e-8137-ef4f7d2be4ed/00711/w=256,quality=90,fit=scale-down",
+      "website": "https://0xfbi.com/",
+      "contact": "admin@fbi.xyz"
+    },
+    "forms": [
+      {
+        "id": "fbi-application-2025",
+        "name": "FBI Fellowship Application 2025",
+        "description": "Apply to join our exclusive builder fellowship program. Selected builders will receive funding, mentorship, and access to our network.",
+        "status": "published", 
+        "publishedUrl": "https://fellowship.xyz/forms/fbi-application-2025",
+        "createdAt": "2025-05-01T12:00:00Z",
+        "updatedAt": "2025-05-10T15:30:00Z",
+        "questions": [
+          {
+            "id": "q1",
+            "type": "text",
+            "required": true,
+            "label": "Full Name",
+            "placeholder": "Enter your full name"
+          },
+          {
+            "id": "q2",
+            "type": "email",
+            "required": true,
+            "label": "Email Address",
+            "placeholder": "your@email.com"
+          },
+          {
+            "id": "q3",
+            "type": "tel",
+            "required": true,
+            "label": "Contact Number",
+            "placeholder": "+1 (123) 456-7890"
+          },
+          {
+            "id": "q4",
+            "type": "text",
+            "required": true,
+            "label": "GitHub Username",
+            "placeholder": "your-github-username"
+          },
+          {
+            "id": "q5",
+            "type": "social",
+            "required": false,
+            "label": "Twitter/X Handle",
+            "placeholder": "@username"
+          },
+          {
+            "id": "q6",
+            "type": "social",
+            "required": false,
+            "label": "Warpcast Handle",
+            "placeholder": "@username"
+          },
+          {
+            "id": "q7",
+            "type": "wallet",
+            "required": true,
+            "label": "Ethereum Wallet Address",
+            "placeholder": "0x..."
+          },
+          {
+            "id": "q8",
+            "type": "textarea",
+            "required": true,
+            "label": "Tell us about your experience in blockchain development",
+            "placeholder": "Describe your projects, skills, and experience..."
+          },
+          {
+            "id": "q9",
+            "type": "textarea",
+            "required": true,
+            "label": "What do you hope to achieve through this fellowship?",
+            "placeholder": "Your goals and expectations..."
+          },
+          {
+            "id": "q10",
+            "type": "file",
+            "required": false,
+            "label": "Upload your resume/CV (PDF)",
+            "acceptedFileTypes": [".pdf"]
+          }
+        ]
+      }
+    ],
+    "submissions": [
+      {
+        "id": "sub-001",
+        "formId": "fbi-application-2025",
+        "submittedAt": "2025-05-15T14:23:45Z",
+        "status": "pending", 
+        "selected": false,
+        "answers": {
+          "q1": "John Doe",
+          "q2": "john.doe@example.com",
+          "q3": "+1 (555) 123-4567",
+          "q4": "johndoe",
+          "q5": "@johndoe",
+          "q6": "@johnd",
+          "q7": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+          "q8": "I've been developing on Ethereum for 3 years, built multiple DeFi protocols and contributed to several open-source projects...",
+          "q9": "I want to expand my knowledge in ZK tech and build privacy-preserving applications...",
+          "q10": "https://storage.fellowship.xyz/fbi/resumes/johndoe-resume.pdf"
+        },
+        "githubData": {
+          "userData": {
+            "id": 12345678,
+            "login": "johndoe",
+            "name": "John Doe",
+            "bio": "Blockchain developer | Ethereum enthusiast",
+            "followers": 120,
+            "public_repos": 35
+          },
+          "repoStars": 245,
+          "contributionCount": 523
+        },
+        "onchainData": {
+          "txCount": 156,
+          "deployedContracts": 8,
+          "ethGlobalBadges": 3
+        },
+        "notes": "Strong technical background, active in hackathons"
+      },
+      {
+        "id": "sub-002",
+        "formId": "fbi-application-2025",
+        "submittedAt": "2025-05-16T09:12:33Z",
+        "status": "reviewing",
+        "selected": true,
+        "answers": {
+          "q1": "Jane Smith",
+          "q2": "jane.smith@example.com",
+          "q3": "+44 7700 900123",
+          "q4": "janesmith",
+          "q5": "@janesmith",
+          "q6": "@janes",
+          "q7": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+          "q8": "Full-stack developer with focus on smart contracts. Built multiple NFT projects and DEXs...",
+          "q9": "Looking to collaborate with other builders and launch a new protocol...",
+          "q10": "https://storage.fellowship.xyz/fbi/resumes/janesmith-resume.pdf"
+        },
+        "githubData": {
+          "userData": {
+            "id": 23456789,
+            "login": "janesmith",
+            "name": "Jane Smith",
+            "bio": "Smart contract developer | ZK enthusiast",
+            "followers": 210,
+            "public_repos": 42
+          },
+          "repoStars": 378,
+          "contributionCount": 689
+        },
+        "onchainData": {
+          "txCount": 203,
+          "deployedContracts": 12,
+          "ethGlobalBadges": 5
+        },
+        "notes": "Excellent candidate, has won multiple hackathons"
+      }
+    ],
+    "selectionCriteria": [
+      {
+        "id": "criteria-001",
+        "name": "Technical Skills",
+        "description": "Evaluation of technical capabilities based on GitHub activity and prior projects",
+        "weight": 40
+      },
+      {
+        "id": "criteria-002",
+        "name": "Onchain Activity",
+        "description": "Assessment of blockchain experience through transaction history and contract deployments",
+        "weight": 30
+      },
+      {
+        "id": "criteria-003",
+        "name": "Vision & Goals",
+        "description": "Clarity and alignment of applicant's goals with the fellowship mission",
+        "weight": 20
+      },
+      {
+        "id": "criteria-004",
+        "name": "Community Engagement",
+        "description": "Participation in the broader blockchain community",
+        "weight": 10
+      }
+    ],
+    "emailTemplates": [
+      {
+        "id": "email-001",
+        "name": "Selected Applicants",
+        "subject": "Congratulations on Your FBI Fellowship Selection!",
+        "body": "Dear {{name}},\n\nWe are thrilled to inform you that you have been selected for the FBI Fellowship program! Your technical expertise, blockchain experience, and vision for the future of web3 impressed our selection committee.\n\nNext steps:\n1. Please confirm your acceptance by replying to this email within 7 days\n2. Join our Discord community: {{discordLink}}\n3. Schedule your onboarding call: {{calendarLink}}\n\nWe look forward to welcoming you to our community of builders!\n\nBest regards,\nThe FBI Team"
+      },
+      {
+        "id": "email-002",
+        "name": "Rejected Applicants",
+        "subject": "Update on Your FBI Fellowship Application",
+        "body": "Dear {{name}},\n\nThank you for your interest in the FBI Fellowship program. We received an overwhelming number of applications this year, and after careful review, we regret to inform you that we are unable to offer you a place in this cohort.\n\nWe encourage you to apply again in the future and to continue your journey in web3 development.\n\nBest regards,\nThe FBI Team"
+      }
+    ]
+  }
