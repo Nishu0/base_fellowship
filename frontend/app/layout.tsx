@@ -81,7 +81,6 @@ export default function RootLayout({
         <ThemeProvider>
           <Navbar />
           {children}
-          <ContactModal/>
         </ThemeProvider>
       </body>
     </html>

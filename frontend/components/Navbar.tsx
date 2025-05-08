@@ -25,31 +25,19 @@ export default function Navbar() {
       <nav data-orientation="horizontal" className="mx-auto flex h-16 flex-row items-center px-6 lg:px-8" dir="ltr">
         {/* Left side elements */}
         <Link href="/" className="inline-flex items-center gap-2.5 font-semibold">
-          <p className="font-serif italic text-2xl">FBI</p>
+          <p className="font-serif italic text-2xl">Klyro</p>
         </Link>
         
         
         {/* Right side elements */}
-        <div className="flex flex-row items-center justify-end gap-1.5 flex-1">
+        <div className="flex flex-row items-center justify-end gap-4 flex-1">
           <Link href="/form" className="inline-flex items-center gap-2.5 font-semibold">
-            <p className="font-serif text-2xl">Become an org</p>
+            <p className="text-xl">Partner with us</p>
           </Link>
         </div>
         
-        {/* GitHub and Mobile Menu */}
+        {/* Mobile Menu */}
         <ul className="flex flex-row items-center gap-2">
-          <li className="list-none">
-            <a 
-              href="/create-profile" 
-              rel="noreferrer noopener" 
-              target="_blank" 
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors duration-100 disabled:pointer-events-none disabled:opacity-50 hover:bg-fd-accent hover:text-fd-accent-foreground p-1.5 [&_svg]:size-5 -me-1.5 max-lg:hidden" 
-              aria-label="GitHub" 
-              data-active="false"
-            >
-              <User className="h-5 w-5" />
-            </a>
-          </li>
           <li className="list-none lg:hidden">
             <button 
               id="mobile-menu-trigger" 
@@ -84,64 +72,26 @@ export default function Navbar() {
       {isMenuOpen && (
         <div 
           id="mobile-menu-content"
-          className="lg:hidden absolute w-full bg-fd-background border-t border-fd-border py-2 px-4 z-50"
+          className="lg:hidden absolute w-full bg-background border-t border-zinc-200 dark:border-zinc-800 py-2 px-4 shadow-lg z-50"
         >
           <ul className="space-y-2">
-          <li>
+            <li>
               <Link 
                 href="/form" 
-                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
+                className="block p-2 text-sm hover:text-indigo-500"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Form
+                Become an org
               </Link>
             </li>
             <li>
               <Link 
-                href="/leaderboard" 
-                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Leaderboard
-              </Link>
-            </li>
-            <li>
-              <Link 
-                href="/profile/sample" 
-                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
+                href="/user" 
+                className="block p-2 text-sm hover:text-indigo-500"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Profile
               </Link>
-            </li>
-            <li>
-              <Link 
-                href="/organizer" 
-                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Organizer
-              </Link>
-            </li>
-            <li>
-              <Link 
-                href="https://x.com/" 
-                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Twitter
-              </Link>
-            </li>
-            <li>
-              <a 
-                href="https://github.com/"
-                rel="noreferrer noopener"
-                target="_blank"
-                className="block p-2 text-sm text-fd-muted-foreground hover:text-fd-accent-foreground"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                GitHub
-              </a>
             </li>
           </ul>
         </div>

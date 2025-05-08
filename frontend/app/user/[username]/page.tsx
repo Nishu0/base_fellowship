@@ -238,6 +238,61 @@ export default function UserProfilePage() {
     };
   };
 
+  // Process onchain data for heatmap
+  const getOnchainActivityData = () => {
+    if (!userData?.onchainHistory || Object.keys(userData.onchainHistory).length === 0) {
+      return {
+        transactionsByDay: [],
+        activityMonths: [],
+        totalTransactions: 0
+      };
+    }
+
+    // Collect all transactions from all chains
+    const allTransactions = Object.values(userData.onchainHistory).flat();
+    
+    // Get earliest and latest transaction dates
+    const dates = allTransactions.map(tx => new Date(tx.date));
+    const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
+    const latestDate = new Date(Math.max(...dates.map(d => d.getTime())));
+    
+    // Create a date range for the full period (similar to GitHub's full year view)
+    const startDate = new Date(earliestDate);
+    startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from beginning of week
+    
+    const endDate = new Date(latestDate);
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // End at end of week
+    
+    // Generate daily counts (including zeros for days with no activity)
+    const dailyCounts = [];
+    const months = new Set();
+    
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // Count transactions on this date
+      const count = allTransactions.filter(tx => 
+        tx.date.split('T')[0] === dateStr
+      ).length;
+      
+      dailyCounts.push(count);
+      
+      // Track month names
+      const monthName = currentDate.toLocaleString('default', { month: 'short' });
+      months.add(monthName);
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return {
+      transactionsByDay: dailyCounts,
+      activityMonths: Array.from(months) as string[],
+      totalTransactions: allTransactions.length
+    };
+  };
+
   // Calculate scores
   const calculateScores = () => {
     if (!userData) return { github: 0, onchain: 0, web2: 0, overall: 0 };
@@ -273,6 +328,34 @@ export default function UserProfilePage() {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  // Group chains by network
+  const groupChainsByNetwork = (chains: { name: string, transactions: number, contracts: number, score: number, firstActivity: string | null }[]) => {
+    const networks: Record<string, { name: string, networks: typeof chains, totalScore: number }> = {};
+
+    chains.forEach(chain => {
+      const network = chain.name.split(' ')[0];
+      if (!networks[network]) {
+        networks[network] = { name: network, networks: [], totalScore: 0 };
+      }
+      networks[network].networks.push(chain);
+      networks[network].totalScore += chain.score;
+    });
+
+    return Object.entries(networks).map(([_, value]) => value);
+  };
+
+  // Helper function to get network icon
+  const getNetworkIcon = (networkName: string): string | undefined => {
+    const lowerNetworkName = networkName.toLowerCase();
+    if (lowerNetworkName.includes('eth')) {
+      return '/ethereum.svg';
+    } else if (lowerNetworkName.includes('base')) {
+      return '/base.svg';
+    }
+    // Return undefined for networks without icons
+    return undefined;
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -302,6 +385,7 @@ export default function UserProfilePage() {
 
   // Get transformed data
   const githubActivity = getGithubActivityData();
+  const onchainActivity = getOnchainActivityData();
   const topRepos = getTopRepos();
   const topLanguages = getTopLanguages();
   const scores = calculateScores();
@@ -344,88 +428,119 @@ export default function UserProfilePage() {
     },
     onchainActivity: {
       totalTransactions: onchainData.totalTransactions,
-      chains: onchainData.chains
+      chains: onchainData.chains,
+      transactionsByDay: onchainActivity.transactionsByDay,
+      activityMonths: onchainActivity.activityMonths
     }
   };
 
   return (
     <main className="bg-black min-h-screen text-white">
-      {/* Hero section with unified header */}
-      <section className="relative pt-10 pb-6">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/20 to-black z-0"></div>
-        
-        <div className="container max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="flex flex-col md:flex-row items-start gap-6">
-            {/* Left Column - Profile image and stats */}
-            <div className="w-full md:w-1/3 lg:w-1/4 space-y-6">
-              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
-                <div className="flex flex-col items-center">
-                  <div className="relative mb-4">
-                    <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-zinc-800">
-                      <Image
-                        src={user.avatar}
-                        alt={user.name}
-                        width={112}
-                        height={112}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-lg font-semibold rounded-full w-10 h-10 flex items-center justify-center border-4 border-black">
-                      {user.scores.overall}
-                    </div>
-                  </div>
-                  
-                  <h1 className="text-xl font-bold">{user.name}</h1>
-                  <p className="text-sm text-zinc-400 mb-3">@{user.username}</p>
-                  
-                  <div className="flex gap-2 mb-4 w-full justify-center">
-                    {user.twitter && (
-                      <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
-                        <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700">
-                          <Twitter className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    )}
-                    <Link href={`https://github.com/${user.username}`} target="_blank">
-                      <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700">
-                        <Github className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700">
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="w-full space-y-3">
-                    {user.location && (
-                      <div className="flex items-center text-sm">
-                        <MapPin className="h-4 w-4 mr-2 text-zinc-500" />
-                        <span className="text-zinc-300">{user.location}</span>
-                      </div>
-                    )}
-                    {user.joinedDate && (
-                      <div className="flex items-center text-sm">
-                        <Calendar className="h-4 w-4 mr-2 text-zinc-500" />
-                        <span className="text-zinc-300">Joined {user.joinedDate}</span>
-                      </div>
-                    )}
-                    {user.blogUrl && (
-                      <div className="flex items-center text-sm">
-                        <Globe className="h-4 w-4 mr-2 text-zinc-500" />
-                        <a href={user.blogUrl} target="_blank" rel="noopener noreferrer" 
-                           className="text-zinc-300 hover:text-indigo-400 truncate">
-                          {user.blogUrl.replace(/^https?:\/\//, '')}
-                        </a>
-                      </div>
-                    )}
-                  </div>
+      <div className="pt-8 pb-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
+          <div className="flex flex-col md:flex-row items-start gap-4">
+            <div className="relative">
+              <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-black">
+                <Image
+                  src={user.avatar}
+                  alt={user.name}
+                  width={128}
+                  height={128}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-lg font-semibold rounded-full w-10 h-10 flex items-center justify-center border-4 border-black">
+                {user.scores.overall}
+              </div>
+            </div>
+            
+            <div className="flex-1 pt-2 md:pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold flex items-center">
+                  {user.name}
+                  {user.verified && (
+                    <svg className="w-6 h-6 ml-2 text-blue-500" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
+                    </svg>
+                  )}
+                </h1>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-zinc-800 text-zinc-200">@{user.username}</Badge>
                 </div>
               </div>
               
+              <p className="text-zinc-300 mb-3">{user.bio}</p>
+              
+              <div className="flex flex-wrap gap-2 mb-3">
+                {user.skills.map(skill => (
+                  <Badge key={skill} className="bg-zinc-800 text-zinc-200">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-4 text-sm text-zinc-400">
+                {user.location && (
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {user.location}
+                  </div>
+                )}
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Joined {user.joinedDate}
+                </div>
+                {user.blogUrl && (
+                  <div className="flex items-center">
+                    <Globe className="h-4 w-4 mr-1" />
+                    <a href={user.blogUrl} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 truncate">
+                      {user.blogUrl.replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-4 md:mt-10">
+              <div className="flex gap-2">
+                {user.twitter && (
+                  <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
+                    <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
+                      <Twitter className="h-4 w-4 mr-2" />
+                      Twitter
+                    </Button>
+                  </Link>
+                )}
+                <Link href={`https://github.com/${user.username}`} target="_blank">
+                  <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
+                    <Github className="h-4 w-4 mr-2" />
+                    GitHub
+                  </Button>
+                </Link>
+              </div>
+              <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700" onClick={() => window.navigator.clipboard.writeText(window.location.href)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Profile
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-zinc-800 mt-2 mb-6"></div>
+
+      {/* Main content section */}
+      <section className="relative pb-6">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/10 to-black z-0"></div>
+        
+        <div className="container max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            {/* Left Column - Score Overview */}
+            <div className="w-full md:w-80 space-y-5">
               {/* Score Overview Card */}
-              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Score Overview</h2>
+              <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
+                <h2 className="text-xl font-semibold mb-5">Score Overview</h2>
                 
                 <div className="space-y-5">
                   {/* Overall Score */}
@@ -434,7 +549,7 @@ export default function UserProfilePage() {
                       <span className="text-zinc-400">Overall Score</span>
                       <span className="font-medium">{user.scores.overall}/100</span>
                     </div>
-                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full"
                         style={{ width: `${user.scores.overall}%` }}
@@ -448,7 +563,7 @@ export default function UserProfilePage() {
                       <span className="text-zinc-400">GitHub Score</span>
                       <span className="font-medium">{user.scores.github}/100</span>
                     </div>
-                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-purple-500 rounded-full"
                         style={{ width: `${user.scores.github}%` }}
@@ -462,7 +577,7 @@ export default function UserProfilePage() {
                       <span className="text-zinc-400">Onchain Score</span>
                       <span className="font-medium">{user.scores.onchain}/100</span>
                     </div>
-                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-blue-500 rounded-full"
                         style={{ width: `${user.scores.onchain}%` }}
@@ -476,7 +591,7 @@ export default function UserProfilePage() {
                       <span className="text-zinc-400">Web2 Score</span>
                       <span className="font-medium">{user.scores.web2}/100</span>
                     </div>
-                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-green-500 rounded-full"
                         style={{ width: `${user.scores.web2}%` }}
@@ -486,26 +601,51 @@ export default function UserProfilePage() {
                 </div>
               </div>
               
-              {/* Blockchain Scores Card */}
-              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold">Chain Activity</h2>
+              {/* Chain Activity Card */}
+              <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-5">
+                  <h2 className="text-xl font-semibold">Chain Activity</h2>
+                  <ChevronDown className="h-5 w-5 text-zinc-500" />
                 </div>
                 
-                <div className="space-y-4">
-                  {user.chains.map(chain => (
-                    <div key={chain.name}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-zinc-300">{chain.name}</span>
-                        <div className="text-sm text-zinc-400">{chain.transactions} tx</div>
+                <div className="space-y-3">
+                  {groupChainsByNetwork(user.chains).map(network => (
+                    <div key={network.name} className="bg-zinc-900/70 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-medium">
+                            {getNetworkIcon(network.name) ? (
+                              <Image
+                                src={getNetworkIcon(network.name) as string}
+                                alt={network.name}
+                                width={20}
+                                height={20}
+                                className="h-4 w-4 object-contain"
+                              />
+                            ) : (
+                              network.name.charAt(0)
+                            )}
+                          </div>
+                          <span className="font-medium">{network.name}</span>
+                        </div>
+                        <Badge className="text-xs px-2 py-0 bg-indigo-900/70 text-indigo-300 border-indigo-700">
+                          {Math.round(network.totalScore / network.networks.length)}/100
+                        </Badge>
                       </div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-zinc-500">Score: {chain.score}/100</span>
+                      
+                      <div className="text-xs text-zinc-400 ml-9 mb-2">
+                        {network.networks.map(chain => (
+                          <div key={chain.name} className="flex justify-between">
+                            <span>{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
+                            <span>{chain.transactions} tx</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                      
+                      <div className="h-1.5 w-full bg-zinc-800/60 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${(chain.score / 100) * 100}%` }}
+                          style={{ width: `${Math.round(network.totalScore / network.networks.length)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -516,46 +656,33 @@ export default function UserProfilePage() {
             
             {/* Right Column - Main content area */}
             <div className="w-full md:w-2/3 lg:w-3/4 space-y-6">
-              {/* Bio Section */}
-              <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
-                <p className="text-zinc-300 mb-4">{user.bio}</p>
-                
-                <div className="flex flex-wrap gap-2">
-                  {user.skills.map(skill => (
-                    <Badge key={skill} className="bg-zinc-800 text-zinc-200">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
               {/* Tabs navigation */}
-              <div className="flex overflow-x-auto space-x-2 pb-2">
+              <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-full p-1 inline-flex overflow-x-auto">
                 <Button 
-                  variant={activeTab === "overview" ? "default" : "outline"} 
+                  variant={activeTab === "overview" ? "default" : "ghost"} 
                   onClick={() => setActiveTab("overview")}
-                  className={`rounded-full px-6 ${activeTab === "overview" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                  className={`rounded-full px-6 ${activeTab === "overview" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
                   Overview
                 </Button>
                 <Button 
-                  variant={activeTab === "github" ? "default" : "outline"} 
+                  variant={activeTab === "github" ? "default" : "ghost"} 
                   onClick={() => setActiveTab("github")}
-                  className={`rounded-full px-6 ${activeTab === "github" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                  className={`rounded-full px-6 ${activeTab === "github" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
                   GitHub
                 </Button>
                 <Button 
-                  variant={activeTab === "chains" ? "default" : "outline"} 
+                  variant={activeTab === "chains" ? "default" : "ghost"} 
                   onClick={() => setActiveTab("chains")}
-                  className={`rounded-full px-6 ${activeTab === "chains" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                  className={`rounded-full px-6 ${activeTab === "chains" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
                   Chains
                 </Button>
                 <Button 
-                  variant={activeTab === "skills" ? "default" : "outline"} 
+                  variant={activeTab === "skills" ? "default" : "ghost"} 
                   onClick={() => setActiveTab("skills")}
-                  className={`rounded-full px-6 ${activeTab === "skills" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:text-white"}`}
+                  className={`rounded-full px-6 ${activeTab === "skills" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
                   Skills
                 </Button>
@@ -565,7 +692,7 @@ export default function UserProfilePage() {
               {activeTab === "overview" && (
                 <>
                   {/* GitHub stats card */}
-                  <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                  <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center">
                         <Github className="h-5 w-5 mr-2 text-blue-400" />
@@ -577,27 +704,27 @@ export default function UserProfilePage() {
                     </div>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-5">
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.githubActivity.repos}</div>
                         <div className="text-xs text-zinc-400">Repositories</div>
                       </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.githubActivity.followers}</div>
                         <div className="text-xs text-zinc-400">Followers</div>
                       </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.githubActivity.stars}</div>
                         <div className="text-xs text-zinc-400">Stars</div>
                       </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.githubActivity.forks}</div>
                         <div className="text-xs text-zinc-400">Forks</div>
                       </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.githubActivity.prs}</div>
                         <div className="text-xs text-zinc-400">Pull Requests</div>
                       </div>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.githubActivity.contributions}</div>
                         <div className="text-xs text-zinc-400">Contributions</div>
                       </div>
@@ -616,65 +743,96 @@ export default function UserProfilePage() {
                   </div>
                   
                   {/* Blockchain activity card */}
-                  <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                  <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center">
                         <BarChart4 className="h-5 w-5 mr-2 text-indigo-400" />
                         <h2 className="text-lg font-bold">Blockchain Activity</h2>
                       </div>
-                      <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
+                      <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700 hover:bg-indigo-900/80">
                         Score: {user.scores.onchain}/100
                       </Badge>
                     </div>
                     
-                    <div className="space-y-4">
-                      {user.chains.length > 0 ? (
-                        user.chains.map((chain) => (
-                          <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
+                    {user.onchainActivity.transactionsByDay.length > 0 && (
+                      <div className="w-full mb-5">
+                        <ActivityHeatmap
+                          data={user.onchainActivity.transactionsByDay}
+                          months={user.onchainActivity.activityMonths}
+                          colorScheme="onchain"
+                          title="On-chain Transactions"
+                          totalCount={user.onchainActivity.totalTransactions}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="space-y-6">
+                      {groupChainsByNetwork(user.chains).map((networkGroup) => (
+                        <div key={networkGroup.name} className="bg-zinc-900/70 rounded-xl overflow-hidden">
+                          <div className="p-4 border-b border-zinc-800">
+                            <div className="flex items-center justify-between">
                               <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center mr-3">
-                                  <span>{chain.name.charAt(0)}</span>
+                                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-md font-medium mr-3">
+                                  {getNetworkIcon(networkGroup.name) ? (
+                                    <Image
+                                      src={getNetworkIcon(networkGroup.name) as string}
+                                      alt={networkGroup.name}
+                                      width={24}
+                                      height={24}
+                                      className="h-5 w-5 object-contain"
+                                    />
+                                  ) : (
+                                    networkGroup.name.charAt(0)
+                                  )}
                                 </div>
-                                <h3 className="font-medium">{chain.name}</h3>
+                                <span className="text-lg font-medium">{networkGroup.name}</span>
                               </div>
-                              <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
-                                Score: {chain.score}/100
+                              <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700 px-2 hover:bg-indigo-900/80">
+                                Score: {networkGroup.totalScore}/100
                               </Badge>
                             </div>
-                            
-                            <div className="space-y-3">
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="text-center">
-                                  <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
-                                  <div className="text-xs text-zinc-400">Transactions</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-lg font-semibold text-indigo-400">{chain.contracts}</div>
-                                  <div className="text-xs text-zinc-400">Contracts</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-lg font-semibold text-indigo-400">
-                                    {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {year: 'numeric', month: 'short'}) : 'N/A'}
+                          </div>
+                          
+                          <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {networkGroup.networks.map(chain => (
+                              <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center">
+                                    <span className="font-medium text-indigo-200">{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
                                   </div>
-                                  <div className="text-xs text-zinc-400">First Activity</div>
+                                  {/* <Badge className="text-xs bg-indigo-900/70 text-indigo-300 hover:bg-indigo-900/80">
+                                    {chain.score}/100
+                                  </Badge> */}
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                                  <div>
+                                    <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
+                                    <div className="text-xs text-zinc-400">Transactions</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-lg font-semibold text-indigo-400">{chain.contracts || 0}</div>
+                                    <div className="text-xs text-zinc-400">Contracts</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-lg font-semibold text-indigo-400">
+                                      {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {month: 'short', year: 'numeric'}) : 'N/A'}
+                                    </div>
+                                    <div className="text-xs text-zinc-400">First Active</div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
+                            ))}
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-4 text-zinc-500">
-                          <p>No blockchain activity data available</p>
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </>
               )}
 
               {activeTab === "github" && (
-                <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6 overflow-hidden">
+                <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6 overflow-hidden">
                   <h2 className="text-lg font-semibold mb-4">GitHub Activity</h2>
                   
                   <div className="w-full">
@@ -691,7 +849,7 @@ export default function UserProfilePage() {
                     <div>
                       <h3 className="text-sm font-medium text-zinc-300 mb-3">GitHub Stats</h3>
                       <div className="space-y-3">
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                        <div className="bg-zinc-900/70 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <GitFork className="h-4 w-4 mr-2 text-zinc-400" />
@@ -700,7 +858,7 @@ export default function UserProfilePage() {
                             <span className="text-indigo-400 font-medium">{user.githubActivity.forks}</span>
                           </div>
                         </div>
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                        <div className="bg-zinc-900/70 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <Star className="h-4 w-4 mr-2 text-zinc-400" />
@@ -709,7 +867,7 @@ export default function UserProfilePage() {
                             <span className="text-indigo-400 font-medium">{user.githubActivity.stars}</span>
                           </div>
                         </div>
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                        <div className="bg-zinc-900/70 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <GitPullRequest className="h-4 w-4 mr-2 text-zinc-400" />
@@ -718,7 +876,7 @@ export default function UserProfilePage() {
                             <span className="text-indigo-400 font-medium">{user.githubActivity.prs}</span>
                           </div>
                         </div>
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                        <div className="bg-zinc-900/70 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <GitCommit className="h-4 w-4 mr-2 text-zinc-400" />
@@ -727,7 +885,7 @@ export default function UserProfilePage() {
                             <span className="text-indigo-400 font-medium">{user.githubActivity.issues}</span>
                           </div>
                         </div>
-                        <div className="bg-zinc-800/50 rounded-lg p-3">
+                        <div className="bg-zinc-900/70 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <Users className="h-4 w-4 mr-2 text-zinc-400" />
@@ -742,8 +900,8 @@ export default function UserProfilePage() {
                     <div>
                       <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Repositories</h3>
                       <div className="space-y-3">
-                        {user.githubActivity.topRepos.map((repo, index) => (
-                          <div key={index} className="bg-zinc-800/50 rounded-lg p-3">
+                        {user.githubActivity.topRepos.slice(0, 3).map((repo, index) => (
+                          <div key={index} className="bg-zinc-900/70 rounded-lg p-3">
                             <div className="font-medium mb-1 truncate">{repo.name}</div>
                             <p className="text-xs text-zinc-400 mb-2 line-clamp-2">{repo.description}</p>
                             <div className="flex items-center justify-between">
@@ -776,43 +934,80 @@ export default function UserProfilePage() {
               )}
 
               {activeTab === "chains" && (
-                <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                   <h2 className="text-lg font-semibold mb-4">Blockchain Activity</h2>
                   
                   {user.onchainActivity.totalTransactions > 0 ? (
                     <>
-                      <div className="space-y-5">
-                        {user.chains.map((chain) => (
-                          <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center mr-3">
-                                  <span>{chain.name.charAt(0)}</span>
+                      {user.onchainActivity.transactionsByDay.length > 0 && (
+                        <div className="w-full mb-6">
+                          <ActivityHeatmap
+                            data={user.onchainActivity.transactionsByDay}
+                            months={user.onchainActivity.activityMonths}
+                            colorScheme="onchain"
+                            title="On-chain Transactions"
+                            totalCount={user.onchainActivity.totalTransactions}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="space-y-6">
+                        {groupChainsByNetwork(user.chains).map((networkGroup) => (
+                          <div key={networkGroup.name} className="bg-zinc-900/70 rounded-xl overflow-hidden">
+                            <div className="p-4 border-b border-zinc-800">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-md font-medium mr-3">
+                                    {getNetworkIcon(networkGroup.name) ? (
+                                      <Image
+                                        src={getNetworkIcon(networkGroup.name) as string}
+                                        alt={networkGroup.name}
+                                        width={24}
+                                        height={24}
+                                        className="h-5 w-5 object-contain"
+                                      />
+                                    ) : (
+                                      networkGroup.name.charAt(0)
+                                    )}
+                                  </div>
+                                  <span className="text-lg font-medium">{networkGroup.name}</span>
                                 </div>
-                                <h3 className="font-medium">{chain.name}</h3>
+                                <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700 px-2">
+                                  Score: {networkGroup.totalScore}/100
+                                </Badge>
                               </div>
-                              <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
-                                Score: {chain.score}/100
-                              </Badge>
                             </div>
                             
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="text-center">
-                                  <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
-                                  <div className="text-xs text-zinc-400">Transactions</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-lg font-semibold text-indigo-400">{chain.contracts}</div>
-                                  <div className="text-xs text-zinc-400">Contracts</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-lg font-semibold text-indigo-400">
-                                    {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {year: 'numeric', month: 'short'}) : 'N/A'}
+                            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {networkGroup.networks.map(chain => (
+                                <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center">
+                                      <span className="font-medium text-indigo-200">{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
+                                    </div>
+                                    {/* <Badge className="text-xs bg-indigo-900/70 text-indigo-300">
+                                      {chain.score}/100
+                                    </Badge> */}
                                   </div>
-                                  <div className="text-xs text-zinc-400">First Activity</div>
+                                  
+                                  <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
+                                      <div className="text-xs text-zinc-400">Transactions</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.contracts || 0}</div>
+                                      <div className="text-xs text-zinc-400">Contracts</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">
+                                        {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {month: 'short', year: 'numeric'}) : 'N/A'}
+                                      </div>
+                                      <div className="text-xs text-zinc-400">First Active</div>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
+                              ))}
                             </div>
                           </div>
                         ))}
@@ -828,7 +1023,7 @@ export default function UserProfilePage() {
               )}
 
               {activeTab === "skills" && (
-                <div className="bg-zinc-900/70 backdrop-blur-sm border border-zinc-800 rounded-xl p-6">
+                <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center">
                       <Code2 className="h-5 w-5 mr-2 text-purple-400" />
@@ -839,13 +1034,13 @@ export default function UserProfilePage() {
                   <div className="mb-5">
                     <h3 className="text-sm font-medium mb-3">Programming Languages</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {topLanguages.map((lang, index) => (
-                        <div key={lang.name} className="bg-zinc-800/50 rounded-lg p-4">
+                      {topLanguages.slice(0, 6).map((lang, index) => (
+                        <div key={lang.name} className="bg-zinc-900/70 rounded-lg p-4">
                           <div className="flex justify-between items-center mb-2">
                             <span>{lang.name}</span>
                             <span className="text-sm font-medium text-purple-400">{lang.percentage}%</span>
                           </div>
-                          <div className="w-full bg-zinc-700/50 h-2 rounded-full overflow-hidden">
+                          <div className="w-full bg-zinc-800/60 h-2 rounded-full overflow-hidden">
                             <div 
                               className="bg-purple-500 h-full rounded-full" 
                               style={{ width: `${lang.percentage}%` }}
@@ -859,8 +1054,8 @@ export default function UserProfilePage() {
                   <div>
                     <h3 className="text-sm font-medium mb-3">GitHub Repositories by Language</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {topRepos.map((repo, index) => (
-                        <div key={repo.name} className="bg-zinc-800/50 rounded-lg p-4">
+                      {topRepos.slice(0, 4).map((repo, index) => (
+                        <div key={repo.name} className="bg-zinc-900/70 rounded-lg p-4">
                           <div className="font-medium mb-1">{repo.name}</div>
                           <p className="text-xs text-zinc-400 mb-3 line-clamp-2">{repo.description}</p>
                           
@@ -882,27 +1077,6 @@ export default function UserProfilePage() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Actions footer */}
-      <section className="py-5 border-t border-zinc-900">
-        <div className="container max-w-6xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-center md:text-left">
-              <h3 className="text-lg font-bold">Interested in this builder?</h3>
-              <p className="text-zinc-400 text-sm">Contact directly or share their profile</p>
-            </div>
-            <div className="flex gap-4">
-              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800">
-                <Share2 className="mr-2 h-4 w-4" />
-                Share Profile
-              </Button>
-              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                Contact Builder
-              </Button>
             </div>
           </div>
         </div>

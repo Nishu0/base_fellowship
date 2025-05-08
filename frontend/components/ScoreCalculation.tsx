@@ -97,7 +97,7 @@ export default function ScoreCalculation() {
                   <div className="w-32 h-32 rounded-full bg-emerald-900/20 border border-emerald-800/50 flex items-center justify-center">
                     <div className="w-24 h-24 rounded-full bg-emerald-900/40 border border-emerald-700/50 flex items-center justify-center">
                       <div className="w-16 h-16 rounded-full bg-emerald-900/60 border border-emerald-600/50 flex items-center justify-center text-2xl font-bold text-emerald-300">
-                        FBI
+                      Klyro
                       </div>
                     </div>
                   </div>

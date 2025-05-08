@@ -4,6 +4,7 @@ import DeveloperHeatmap from "@/components/DeveloperHeatmap";
 import ScoreCalculation from "@/components/ScoreCalculation";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import FooterNew from "@/components/FooterNew";
 
 export default function Home() {
   return (
@@ -25,7 +26,7 @@ export default function Home() {
       {/* <ScoreCalculation /> */}
 
       {/* Footer */}
-      <Footer />
+      <FooterNew />
     </main>
   );
 }

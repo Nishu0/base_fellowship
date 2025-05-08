@@ -35,7 +35,7 @@ export default function Header() {
         </Badge>
 
         <div className="space-y-4">
-          <h1 className="font-serif text-6xl font-bold italic tracking-tight md:text-7xl lg:text-8xl text-white">FBI</h1>
+          <h1 className="font-serif text-6xl font-bold italic tracking-tight md:text-7xl lg:text-8xl text-white">Klyro</h1>
           <p className="text-xl text-zinc-400 md:text-2xl">/ Find Builders Intelligently /</p>
         </div>
 
