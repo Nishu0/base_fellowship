@@ -197,4 +197,41 @@ export class FbiController {
         }
     }
     
+    async getAllUsersByScore(req: Request, res: Response): Promise<void> {
+        try {
+            const users = await prisma.user.findMany({
+                include: {
+                    githubData: true,
+                    userScore: true
+                },
+                orderBy: {
+                    userScore: {
+                        totalScore: 'desc'
+                    }
+                },
+                where: {
+                    dataStatus: DataStatus.COMPLETED,
+                    userScore: {
+                        isNot: null
+                    }
+                }
+            });
+
+            const formattedUsers = users.map(user => ({
+                githubUsername: user.githubId,
+                userInfo: user.githubData?.userInfo,
+                score: user.userScore
+            }));
+
+            res.status(200).json({
+                success: true,
+                data: formattedUsers
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
 } 
