@@ -7,6 +7,13 @@ interface QueueConfig {
     port?: number;
     password?: string;
     db?: number;
+    defaultJobOptions?: {
+        attempts?: number;
+        backoff?: {
+            type: 'fixed' | 'exponential';
+            delay: number;
+        };
+    };
 }
 
 interface JobData {
@@ -27,6 +34,7 @@ class QueueManager {
                 password: config.password,
                 db: config.db,
             },
+            defaultJobOptions: config.defaultJobOptions
         });
     }
 

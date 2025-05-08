@@ -6,15 +6,30 @@ import { Job } from 'bullmq';
 export const analyzeQueue = new QueueManager("analyzeQueue", 
     {
         host: "localhost",
-        port: 6379
+        port: 6379,
+        defaultJobOptions: {
+            attempts: 3,  // Number of retry attempts
+            backoff: {
+                type: 'exponential',
+                delay: 1000  // Initial delay in ms
+            }
+        }
     }
 )
 
 const fbiService = new FbiService()
 
 const analyzeQueueJobProcessor = async (job: Job) => {
-    const data = job.data
-    fbiService.processUserData(data)
+    try {
+        const data = job.data
+        await fbiService.processUserData(data)
+        return { success: true }
+    } catch (error) {
+        console.error(`Error processing job ${job.id}:`, error)
+        // If we want to retry the job, we can throw the error
+        // BullMQ will automatically retry based on the queue configuration
+        throw error
+    }
 }
 
 export const registerAnalyzeWorkers = async () => {
