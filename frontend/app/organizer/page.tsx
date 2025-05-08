@@ -155,7 +155,7 @@ export default function OrganizerDashboard() {
               <p className="text-zinc-400 text-sm">{organization.description}</p>
             </div>
           </div>
-          <Link href="/organizer/profile">
+          <Link href="/organizer">
             <Button variant="outline" className="border-zinc-700">
               Edit Organization
             </Button>

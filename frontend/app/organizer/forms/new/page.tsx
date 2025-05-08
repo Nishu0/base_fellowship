@@ -141,7 +141,7 @@ export default function CreateForm() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <Link href="/organizer/dashboard">
+            <Link href="/organizer">
               <Button variant="ghost" size="icon" className="mr-2">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
