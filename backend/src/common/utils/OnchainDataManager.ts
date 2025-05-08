@@ -46,7 +46,6 @@ export class OnchainDataManager {
                         category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721],
                     });
     
-                    console.log("response: ",transfersForAddress);
     
                     if (transfersForAddress.transfers) {
                         console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
@@ -72,7 +71,6 @@ export class OnchainDataManager {
                         category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.INTERNAL],
                     });
     
-                    console.log("response: ",transfersForAddress);
     
                     if (transfersForAddress.transfers) {
                         console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
@@ -188,6 +186,7 @@ export class OnchainDataManager {
         uniqueUsers: number;
         tvl: string;
         totalTransactions: number;
+        isTestnet: Boolean
     }>> {
         try {
             console.log(`[getContractsDeployedByAddress] Starting contract search for deployer: ${deployerAddress}`);
@@ -210,7 +209,7 @@ export class OnchainDataManager {
             const deployments = transfers.filter((transfer) => transfer.to === null);
             const txHashes = deployments.map((deployment) => deployment.hash);
 
-            console.log("response: ",deployments[1]);
+            
 
             const receipts = await Promise.all(
                 txHashes.map((hash) => this.alchemy.core.getTransactionReceipt(hash))
@@ -255,13 +254,16 @@ export class OnchainDataManager {
                         // Get total number of transactions
                         const totalTransactions = transfers.transfers.length;
 
+                        console.log("TES", this.network.includes("seploia"))
+
                         return {
                             address: contract.address,
                             blockNumber: contract.blockNumber,
                             deploymentDate,
                             uniqueUsers: uniqueAddresses.size,
                             tvl,
-                            totalTransactions
+                            totalTransactions,
+                            isTestnet : this.network.includes("seploia")
                         };
                     } catch (error) {
                         console.error(`Error getting metrics for contract ${contract.address}:`, error);

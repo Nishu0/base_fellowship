@@ -178,6 +178,7 @@ export class FbiService {
                             chainHistory = [...chainHistory, ...history];
                         }
 
+
                         // Calculate contract statistics for this chain
                         const contractStats = {
                             mainnet: chainContracts.filter((c: any) => !c.isTestnet).length,
