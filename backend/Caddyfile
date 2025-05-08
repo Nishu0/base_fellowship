@@ -1,0 +1,59 @@
+https://api.klyro.dev/ {
+    redir https://api.klyro.dev/{uri}
+}
+
+# HTTPS Server
+https://api.klyro.dev/{
+    encode gzip
+    log {
+        output file /var/log/caddy/access.log
+    }
+
+    @api {
+        path /api/*
+    }
+    reverse_proxy @api web:8000 {
+        header_up Host {host}
+        header_up Referer {http.referer}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Proxy for Web App (everything else)
+    @webApp {
+        path /*
+        not path /api/*
+        not path /dashboard/*
+        not path /admin/*
+    }
+    reverse_proxy @webApp web:8000 {
+        header_up Host {host}
+        header_up Referer {http.referer}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    @grafana {
+        path /dashboard/*
+    }
+    reverse_proxy @grafana grafana:3000 {
+        header_up Host {host}
+        header_up Referer {http.referer}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    @adminer {
+        path /admin/*
+    }
+    reverse_proxy @adminer adminer:8080 {
+        header_up Host {host}
+        header_up Referer {http.referer}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
