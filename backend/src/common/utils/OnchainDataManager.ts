@@ -4,6 +4,8 @@ import { checkCommunityPacks, checkFinalistPacks } from './ethglobalCred';
 export class OnchainDataManager {
     private alchemy: Alchemy;
     private network: Network;
+    private readonly MAX_RETRIES = 3;
+    private readonly INITIAL_DELAY = 1000; // 1 second
 
     constructor(apiKey: string, network: Network = Network.ETH_MAINNET) {
         this.network = network;
@@ -12,6 +14,35 @@ export class OnchainDataManager {
             network,
         });
         console.log(`[OnchainDataManager] Initialized with network: ${network}`);
+    }
+
+    /**
+     * Helper function to retry API calls with exponential backoff
+     * @param operation The async operation to retry
+     * @param operationName Name of the operation for logging
+     */
+    private async retryWithBackoff<T>(
+        operation: () => Promise<T>,
+        operationName: string
+    ): Promise<T> {
+        let lastError: any;
+        let delay = this.INITIAL_DELAY;
+
+        for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+            try {
+                return await operation();
+            } catch (error: any) {
+                lastError = error;
+                console.log(`[${operationName}] Attempt ${attempt} failed with status ${error.status}. Retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Exponential backoff
+              
+            }
+        }
+
+        // If we've exhausted all retries, throw the last error
+        console.error(`[${operationName}] All ${this.MAX_RETRIES} attempts failed`);
+        throw lastError;
     }
 
     /**
@@ -38,21 +69,26 @@ export class OnchainDataManager {
                 console.log(`[getTransfersForAddresses] Fetching outgoing transfers for ${address}`);
 
                 if(this.network.includes("sepolia") || this.network === Network.BASE_MAINNET){
-                    const transfersForAddress = await this.alchemy.core.getAssetTransfers({
-                        fromBlock: fromBlock?.toString(),
-                        toBlock: toBlock?.toString(),
-                        fromAddress: address,
-                        excludeZeroValue: false,
-                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721],
-                    });
-    
+                    const transfersForAddress = await this.retryWithBackoff(
+                        () => this.alchemy.core.getAssetTransfers({
+                            fromBlock: fromBlock?.toString(),
+                            toBlock: toBlock?.toString(),
+                            fromAddress: address,
+                            excludeZeroValue: false,
+                            category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721],
+                        }),
+                        `getAssetTransfers-outgoing-${address}`
+                    );
     
                     if (transfersForAddress.transfers) {
                         console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
                         // Add block information to each transfer
                         const transfersWithDates = await Promise.all(
                             transfersForAddress.transfers.map(async (transfer) => {
-                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                const block = await this.retryWithBackoff(
+                                    () => this.alchemy.core.getBlock(transfer.blockNum),
+                                    `getBlock-${transfer.blockNum}`
+                                );
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
@@ -62,22 +98,27 @@ export class OnchainDataManager {
                         );
                         transfers.push(...transfersWithDates);
                     }
-                }else {
-                    const transfersForAddress = await this.alchemy.core.getAssetTransfers({
-                        fromBlock: fromBlock?.toString(),
-                        toBlock: toBlock?.toString(),
-                        fromAddress: address,
-                        excludeZeroValue: false,
-                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.INTERNAL],
-                    });
-    
+                } else {
+                    const transfersForAddress = await this.retryWithBackoff(
+                        () => this.alchemy.core.getAssetTransfers({
+                            fromBlock: fromBlock?.toString(),
+                            toBlock: toBlock?.toString(),
+                            fromAddress: address,
+                            excludeZeroValue: false,
+                            category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.INTERNAL],
+                        }),
+                        `getAssetTransfers-outgoing-${address}`
+                    );
     
                     if (transfersForAddress.transfers) {
                         console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
                         // Add block information to each transfer
                         const transfersWithDates = await Promise.all(
                             transfersForAddress.transfers.map(async (transfer) => {
-                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                const block = await this.retryWithBackoff(
+                                    () => this.alchemy.core.getBlock(transfer.blockNum),
+                                    `getBlock-${transfer.blockNum}`
+                                );
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
@@ -88,25 +129,30 @@ export class OnchainDataManager {
                         transfers.push(...transfersWithDates);
                     }
                 }
-                
 
                 // Also get transfers to this address
                 console.log(`[getTransfersForAddresses] Fetching incoming transfers for ${address}`);
 
                 if(this.network.includes("sepolia") || this.network === Network.BASE_MAINNET){
-                    const transfersToAddress = await this.alchemy.core.getAssetTransfers({
-                        fromBlock: fromBlock?.toString(),
-                        toBlock: toBlock?.toString(),
-                        toAddress: address,
-                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
-                    });
+                    const transfersToAddress = await this.retryWithBackoff(
+                        () => this.alchemy.core.getAssetTransfers({
+                            fromBlock: fromBlock?.toString(),
+                            toBlock: toBlock?.toString(),
+                            toAddress: address,
+                            category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
+                        }),
+                        `getAssetTransfers-incoming-${address}`
+                    );
     
                     if (transfersToAddress.transfers) {
                         console.log(`[getTransfersForAddresses] Found ${transfersToAddress.transfers.length} incoming transfers for ${address}`);
                         // Add block information to each transfer
                         const transfersWithDates = await Promise.all(
                             transfersToAddress.transfers.map(async (transfer) => {
-                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                const block = await this.retryWithBackoff(
+                                    () => this.alchemy.core.getBlock(transfer.blockNum),
+                                    `getBlock-${transfer.blockNum}`
+                                );
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
@@ -116,21 +162,26 @@ export class OnchainDataManager {
                         );
                         transfers.push(...transfersWithDates);
                     }
-
-                }else{
-                    const transfersToAddress = await this.alchemy.core.getAssetTransfers({
-                        fromBlock: fromBlock?.toString(),
-                        toBlock: toBlock?.toString(),
-                        toAddress: address,
-                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.INTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
-                    });
+                } else {
+                    const transfersToAddress = await this.retryWithBackoff(
+                        () => this.alchemy.core.getAssetTransfers({
+                            fromBlock: fromBlock?.toString(),
+                            toBlock: toBlock?.toString(),
+                            toAddress: address,
+                            category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.INTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
+                        }),
+                        `getAssetTransfers-incoming-${address}`
+                    );
     
                     if (transfersToAddress.transfers) {
                         console.log(`[getTransfersForAddresses] Found ${transfersToAddress.transfers.length} incoming transfers for ${address}`);
                         // Add block information to each transfer
                         const transfersWithDates = await Promise.all(
                             transfersToAddress.transfers.map(async (transfer) => {
-                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                const block = await this.retryWithBackoff(
+                                    () => this.alchemy.core.getBlock(transfer.blockNum),
+                                    `getBlock-${transfer.blockNum}`
+                                );
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
@@ -141,7 +192,6 @@ export class OnchainDataManager {
                         transfers.push(...transfersWithDates);
                     }
                 }
-                
             }
 
             console.log(`[getTransfersForAddresses] Completed. Retrieved ${transfers.length} total transfers`);
@@ -159,7 +209,10 @@ export class OnchainDataManager {
     async getContractCode(address: string): Promise<string> {
         try {
             console.log(`[getContractCode] Fetching code for contract: ${address}`);
-            const code = await this.alchemy.core.getCode(address);
+            const code = await this.retryWithBackoff(
+                () => this.alchemy.core.getCode(address),
+                `getContractCode-${address}`
+            );
             console.log(`[getContractCode] Retrieved code for ${address}. Code length: ${code.length}`);
             return code;
         } catch (error) {
@@ -192,27 +245,29 @@ export class OnchainDataManager {
             console.log(`[getContractsDeployedByAddress] Starting contract search for deployer: ${deployerAddress}`);
             console.log(`[getContractsDeployedByAddress] Block range: ${startBlock} to ${endBlock}`);
             
-            let transfers: any[] = [];
             // Get all transactions from the deployer address
             console.log(`[getContractsDeployedByAddress] Fetching transactions for ${deployerAddress}`);
-            const response = await this.alchemy.core.getAssetTransfers({
-                fromBlock: typeof startBlock === 'number' ? `0x${startBlock.toString(16)}` : startBlock,
-                toBlock: typeof endBlock === 'number' ? `0x${endBlock.toString(16)}` : endBlock,
-                fromAddress: deployerAddress,
-                excludeZeroValue: false,
-                category: [AssetTransfersCategory.EXTERNAL],
-                withMetadata: true
-            });
+            const response = await this.retryWithBackoff(
+                () => this.alchemy.core.getAssetTransfers({
+                    fromBlock: typeof startBlock === 'number' ? `0x${startBlock.toString(16)}` : startBlock,
+                    toBlock: typeof endBlock === 'number' ? `0x${endBlock.toString(16)}` : endBlock,
+                    fromAddress: deployerAddress,
+                    excludeZeroValue: false,
+                    category: [AssetTransfersCategory.EXTERNAL],
+                    withMetadata: true
+                }),
+                `getAssetTransfers-deployer-${deployerAddress}`
+            );
 
-            transfers = response.transfers;
-
+            const transfers = response.transfers;
             const deployments = transfers.filter((transfer) => transfer.to === null);
             const txHashes = deployments.map((deployment) => deployment.hash);
 
-            
-
             const receipts = await Promise.all(
-                txHashes.map((hash) => this.alchemy.core.getTransactionReceipt(hash))
+                txHashes.map((hash) => this.retryWithBackoff(
+                    () => this.alchemy.core.getTransactionReceipt(hash),
+                    `getTransactionReceipt-${hash}`
+                ))
             );
 
             const contractAddresses = receipts
@@ -229,16 +284,22 @@ export class OnchainDataManager {
                 contractAddresses.map(async (contract) => {
                     try {
                         // Get deployment block for timestamp
-                        const block = await this.alchemy.core.getBlock(contract.blockNumber);
+                        const block = await this.retryWithBackoff(
+                            () => this.alchemy.core.getBlock(contract.blockNumber),
+                            `getBlock-${contract.blockNumber}`
+                        );
                         const deploymentDate = new Date(Number(block.timestamp) * 1000).toISOString();
 
                         // Get all transfers to/from the contract to calculate unique users and TVL
-                        const transfers = await this.alchemy.core.getAssetTransfers({
-                            fromBlock: `0x${contract.blockNumber.toString(16)}`,
-                            toBlock: 'latest',
-                            toAddress: contract.address,
-                            category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20],
-                        });
+                        const transfers = await this.retryWithBackoff(
+                            () => this.alchemy.core.getAssetTransfers({
+                                fromBlock: `0x${contract.blockNumber.toString(16)}`,
+                                toBlock: 'latest',
+                                toAddress: contract.address,
+                                category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20],
+                            }),
+                            `getAssetTransfers-contract-${contract.address}`
+                        );
 
                         // Calculate unique users
                         const uniqueAddresses = new Set();
@@ -254,8 +315,6 @@ export class OnchainDataManager {
                         // Get total number of transactions
                         const totalTransactions = transfers.transfers.length;
 
-                        console.log("TES", this.network.includes("seploia"))
-
                         return {
                             address: contract.address,
                             blockNumber: contract.blockNumber,
@@ -263,7 +322,7 @@ export class OnchainDataManager {
                             uniqueUsers: uniqueAddresses.size,
                             tvl,
                             totalTransactions,
-                            isTestnet : this.network.includes("seploia")
+                            isTestnet: this.network.toString().includes("sepolia")
                         };
                     } catch (error) {
                         console.error(`Error getting metrics for contract ${contract.address}:`, error);
@@ -273,7 +332,8 @@ export class OnchainDataManager {
                             deploymentDate: '',
                             uniqueUsers: 0,
                             tvl: '0',
-                            totalTransactions: 0
+                            totalTransactions: 0,
+                            isTestnet: this.network.includes("sepolia")
                         };
                     }
                 })

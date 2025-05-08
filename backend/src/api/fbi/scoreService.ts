@@ -215,9 +215,10 @@ export class ScoreService {
             const languages = repos.totalLanguageLinesOfCode || {};
             
             const web3Languages = {
-                rust: languages.rust || 0,
-                solidity: languages.solidity || 0,
-                move: languages.move || 0
+                Rust: languages.Rust || 0,
+                Solidity: languages.Solidity || 0,
+                Move: languages.Move || 0,
+                Cadence: languages.Cadence || 0
             };
 
             const totalWeb3LOC = Object.values(web3Languages).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
@@ -279,7 +280,7 @@ export class ScoreService {
             const repos = githubData.repos as any;
 
             // 1. Total PRs
-            const totalPRs = userInfo.pull_requests || 0;
+            const totalPRs = githubData.languagesData.totalPRs || 0;
             const prScore = Math.min(totalPRs / thresholds.prs, 1) * weights.prs;
             web2Metrics.prs = {
                 value: totalPRs,
@@ -289,7 +290,7 @@ export class ScoreService {
             };
 
             // 2. Total Contributions
-            const totalContributions = userInfo.contributions || 0;
+            const totalContributions = githubData.languagesData.totalContributions || 0;
             const contributionScore = Math.min(totalContributions / thresholds.contributions, 1) * weights.contributions;
             web2Metrics.contributions = {
                 value: totalContributions,
@@ -319,7 +320,7 @@ export class ScoreService {
             };
 
             // 5. Total Issues
-            const totalIssues = userInfo.open_issues || 0;
+            const totalIssues = githubData.languagesData.totalIssues || 0;
             const issuesScore = Math.min(totalIssues / thresholds.issues, 1) * weights.issues;
             web2Metrics.issues = {
                 value: totalIssues,
