@@ -1,5 +1,16 @@
 FROM node:22.13.0-slim
 
+# Install Python and build dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    gcc \
+    g++ \
+    python-is-python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g ts-node
+
 # Create app directory
 WORKDIR /usr/src/app
 
@@ -7,7 +18,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install app dependencies
-RUN npm ci
+RUN npm install
 
 # Bundle app source
 COPY . .

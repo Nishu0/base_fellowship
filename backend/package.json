@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts | pino-pretty",
-    "build": "tsup",
+    "build": "npx prisma generate --schema=src/database/prisma/schema.prisma && tsup",
     "start": "node dist/index.js",
     "clean": "rimraf dist coverage",
     "lint": "biome check src/",
@@ -21,8 +21,7 @@
     "db:migrate": "npx prisma migrate dev --schema=src/database/prisma/schema.prisma",
     "db:deploy": "npx prisma migrate deploy --schema=src/database/prisma/schema.prisma",
     "db:studio": "npx prisma studio --schema=src/database/prisma/schema.prisma",
-    "db:reset": "npx prisma migrate reset --schema=src/database/prisma/schema.prisma",
-    "db:seed": "pnpm ts-node src/database/scripts/setup.ts"
+    "db:seed": "tsx src/database/scripts/setup.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.0.0",
@@ -52,7 +51,6 @@
     "pino-http": "^10.0.0",
     "prisma": "^6.5.0",
     "swagger-ui-express": "^5.0.0",
-    "ts-node": "^10.9.2",
     "uuid": "^11.1.0",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.24.3"
@@ -81,12 +79,21 @@
   },
   "tsup": {
     "entry": [
-      "src",
-      "!src/**/__tests__/**",
-      "!src/**/*.test.*"
+      "src/index.ts"
     ],
     "splitting": false,
     "sourcemap": true,
-    "clean": true
+    "clean": true,
+    "noExternal": [
+      "@prisma/client"
+    ],
+    "format": ["cjs"],
+    "ignore": [
+      "**/*.md",
+      "**/*.prisma",
+      "**/*.sql",
+      "**/*.toml",
+      "**/migrations/**"
+    ]
   }
 }

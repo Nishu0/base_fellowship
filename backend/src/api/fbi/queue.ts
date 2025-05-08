@@ -1,12 +1,13 @@
 import QueueManager from "@/common/utils/Queue";
 import { FbiService } from "./fbiService";
 import { Job } from 'bullmq';
+import { env } from "@/common/utils/envConfig";
 
 
 export const analyzeQueue = new QueueManager("analyzeQueue", 
     {
-        host: "localhost",
-        port: 6379,
+        host: env.REDIS_HOST,
+        port: env.REDIS_PORT,
         defaultJobOptions: {
             attempts: 3,  // Number of retry attempts
             backoff: {
