@@ -21,7 +21,8 @@
     "db:migrate": "npx prisma migrate dev --schema=src/database/prisma/schema.prisma",
     "db:deploy": "npx prisma migrate deploy --schema=src/database/prisma/schema.prisma",
     "db:studio": "npx prisma studio --schema=src/database/prisma/schema.prisma",
-    "db:reset": "npx prisma migrate reset --schema=src/database/prisma/schema.prisma"
+    "db:reset": "npx prisma migrate reset --schema=src/database/prisma/schema.prisma",
+    "db:seed": "pnpm ts-node src/database/scripts/setup.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.0.0",
