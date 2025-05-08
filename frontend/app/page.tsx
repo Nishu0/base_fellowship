@@ -10,17 +10,19 @@ export default function Home() {
     <main className="flex flex-col relative bg-black">
       {/* Hero Section - Full viewport height */}
       <Header />
+
+      <ScoreCalculation />
       {/* How section - appears when scrolling */}
       <How />
 
       {/* Features showcase section */}
-      <FeaturesShowcase />
+      {/* <FeaturesShowcase /> */}
 
       {/* Developer heatmap section */}
-      <DeveloperHeatmap />
+      {/* <DeveloperHeatmap /> */}
 
       {/* Score calculation section */}
-      <ScoreCalculation />
+      {/* <ScoreCalculation /> */}
 
       {/* Footer */}
       <Footer />

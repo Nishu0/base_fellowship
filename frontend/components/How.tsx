@@ -90,7 +90,7 @@ export default function How() {
           ))}
         </div>
         
-        {/* Additional value proposition */}
+        {/* Additional value proposition
         <div className="mt-20 max-w-3xl text-center">
           <div className="flex justify-center mb-6">
             <div className="bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-xl p-3">
@@ -124,7 +124,7 @@ export default function How() {
               <p className="text-sm text-zinc-300">Filter by chain-specific expertise</p>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </section>
   );

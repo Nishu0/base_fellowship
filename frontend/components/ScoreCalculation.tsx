@@ -48,10 +48,10 @@ export default function ScoreCalculation() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-2 flex items-center">
-                    Social Engagement
+                    Onchain Contributions
                     <CircleCheck className="h-4 w-4 ml-2 text-emerald-500" />
                   </h3>
-                  <p className="text-zinc-400 text-sm">Twitter and Farcaster profiles, web3 community engagement and technical discussions</p>
+                  <p className="text-zinc-400 text-sm">Onchain contributions, contract deployments, and protocol interactions across chains</p>
                 </div>
               </div>
             </div>
