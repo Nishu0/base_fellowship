@@ -342,7 +342,7 @@ export class ScoreService {
             };
 
             // 7. Account Age
-            const accountAge = Math.floor((Date.now() - new Date(userInfo.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            const accountAge = userInfo.accountAge
             const accountAgeScore = Math.min(accountAge / thresholds.accountAge, 1) * weights.accountAge;
             web2Metrics.accountAge = {
                 value: accountAge,

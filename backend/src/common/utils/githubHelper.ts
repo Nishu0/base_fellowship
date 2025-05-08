@@ -1,10 +1,12 @@
 // githubHelper.ts
 export class GitHubHelper {
     private baseUrl: string;
+    private graphqlUrl: string;
     private headers: HeadersInit;
   
     constructor(token?: string) {
       this.baseUrl = "https://api.github.com";
+      this.graphqlUrl = "https://api.github.com/graphql";
       this.headers = {
         Accept: "application/vnd.github+json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -24,18 +26,30 @@ export class GitHubHelper {
     }
   
     /**
-     * Helper method to make API calls with rate limit handling
+     * Helper method to make GraphQL API calls with rate limit handling
      */
-    private async makeRequest(url: string): Promise<Response> {
-      console.log(`Making request to: ${url}`);
-      let response = await fetch(url, { headers: this.headers });
-      console.log(`Response status: ${response.status} ${response.statusText}`);
+    private async makeGraphQLRequest(query: string, variables: any = {}): Promise<any> {
+      console.log(`Making GraphQL request`);
+      let response = await fetch(this.graphqlUrl, {
+        method: 'POST',
+        headers: {
+          ...this.headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query, variables }),
+      });
       
       if (response.status === 403) {
         await this.handleRateLimit(response);
         console.log('Retrying request after rate limit...');
-        response = await fetch(url, { headers: this.headers });
-        console.log(`Retry response status: ${response.status} ${response.statusText}`);
+        response = await fetch(this.graphqlUrl, {
+          method: 'POST',
+          headers: {
+            ...this.headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query, variables }),
+        });
       }
   
       if (!response.ok) {
@@ -43,73 +57,51 @@ export class GitHubHelper {
         throw new Error(`Failed to fetch: ${response.statusText}`);
       }
   
-      return response;
+      const result = await response.json();
+      if (result.errors) {
+        throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
+      }
+      return result.data;
     }
-  
+
     /**
      * Fetch user details by GitHub username
      */
     async fetchUser(username: string): Promise<any> {
       console.log(`Fetching user details for: ${username}`);
-      const url = `${this.baseUrl}/users/${username}`;
-      const response = await this.makeRequest(url);
-      const data = await response.json();
-      console.log(`User data retrieved for ${username}:`, {
-        login: data.login,
-        name: data.name,
-        public_repos: data.public_repos,
-        followers: data.followers,
-        following: data.following
-      });
-      return data;
-    }
-  
-    /**
-     * Fetch all public repositories of a user
-     */
-    async fetchUserRepos(username: string): Promise<any[]> {
-      console.log(`Fetching repositories for user: ${username}`);
-      const url = `${this.baseUrl}/users/${username}/repos?per_page=100&type=all&sort=updated`;
-      const response = await this.makeRequest(url);
-      const repos = await response.json();
-      console.log(`Retrieved ${repos.length} repositories for ${username}`);
-      return repos;
-    }
-  
-    /**
-     * Fetch languages used in a repository
-     */
-    async fetchRepoLanguages(owner: string, repo: string): Promise<{ [language: string]: number }> {
-      console.log(`Fetching languages for repo: ${owner}/${repo}`);
-      const url = `${this.baseUrl}/repos/${owner}/${repo}/languages`;
-      const response = await this.makeRequest(url);
-      const languages = await response.json();
-      console.log(`Languages for ${owner}/${repo}:`, languages);
-      return languages;
-    }
-  
-    /**
-     * Fetch full repo details (with languages merged)
-     */
-    async fetchFullRepoDetails(owner: string, repo: string): Promise<any> {
-      console.log(`Fetching full details for repo: ${owner}/${repo}`);
-      const repoUrl = `${this.baseUrl}/repos/${owner}/${repo}`;
-      const repoRes = await this.makeRequest(repoUrl);
-      const repoData = await repoRes.json();
-      console.log(`Basic repo data retrieved for ${owner}/${repo}:`, {
-        name: repoData.name,
-        stars: repoData.stargazers_count,
-        forks: repoData.forks_count,
-        open_issues: repoData.open_issues_count
-      });
+      const query = `
+        query($username: String!) {
+          user(login: $username) {
+            login
+            name
+            createdAt
+            repositories(first: 100, privacy: PUBLIC) {
+              totalCount
+            }
+            followers {
+              totalCount
+            }
+            following {
+              totalCount
+            }
+          }
+        }
+      `;
+      const data = await this.makeGraphQLRequest(query, { username });
+      const user = data.user;
       
-      const languages = await this.fetchRepoLanguages(owner, repo);
-      const fullData = {
-        ...repoData,
-        languages,
+      // Calculate account age
+      const createdAt = new Date(user.createdAt);
+      const now = new Date();
+      const accountAgeInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      const accountAgeInYears = Math.floor(accountAgeInDays / 365);
+      const remainingDays = accountAgeInDays % 365;
+
+      return {
+        ...user,
+        followers: user.followers.totalCount,
+        accountAge: accountAgeInDays
       };
-      console.log(`Full repo details retrieved for ${owner}/${repo}`);
-      return fullData;
     }
   
     /**
@@ -117,53 +109,149 @@ export class GitHubHelper {
      */
     async fetchUserReposWithDetails(username: string): Promise<any> {
       console.log(`Fetching detailed repository information for user: ${username}`);
-      const repos = await this.fetchUserRepos(username);
-      console.log(`Processing ${repos.length} repositories for detailed information`);
-
-      let totalForks = 0
-      let totalStars = 0
-      let totalLanguageLinesOfCode: any = {}
       
-      const detailedRepos = await Promise.all(
-        repos.map(async (repo) => {
-          console.log(`Fetching languages for repo: ${repo.full_name}`);
-          const languages = await this.fetchRepoLanguages(repo.owner.login, repo.name);
+      const query = `
+        query($username: String!, $first: Int!, $after: String) {
+          user(login: $username) {
+            repositories(first: $first, after: $after, privacy: PUBLIC) {
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                name
+                fullName: nameWithOwner
+                description
+                url
+                forkCount
+                stargazerCount
+                watchers {
+                  totalCount
+                }
+                issues {
+                  totalCount
+                }
+                repositoryTopics(first: 10) {
+                  nodes {
+                    topic {
+                      name
+                    }
+                  }
+                }
+                createdAt
+                updatedAt
+                pushedAt
+                defaultBranchRef {
+                  name
+                }
+                isPrivate
+                languages(first: 20) {
+                  edges {
+                    size
+                    node {
+                      name
+                    }
+                  }
+                }
+                isFork
+                parent {
+                  nameWithOwner
+                }
+              }
+            }
+          }
+        }
+      `;
 
+      let hasNextPage = true;
+      let endCursor = null;
+      let allRepos: any[] = [];
+      
+      while (hasNextPage) {
+        const data = await this.makeGraphQLRequest(query, { 
+          username, 
+          first: 100,
+          after: endCursor 
+        });
+        
+        const repos = data.user.repositories;
+        allRepos = [...allRepos, ...repos.nodes];
+        
+        hasNextPage = repos.pageInfo.hasNextPage;
+        endCursor = repos.pageInfo.endCursor;
+        
+        // Add a small delay to avoid rate limiting
+        if (hasNextPage) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
 
-          Object.keys(languages).map((langauge) => {
-            if(totalLanguageLinesOfCode[langauge])
-            totalLanguageLinesOfCode[langauge]+= languages[langauge]
-            else
-            totalLanguageLinesOfCode[langauge] = languages[langauge]
-          })
+      let totalForks = 0;
+      let totalStars = 0;
+      let totalLanguageLinesOfCode: any = {};
+      
+      const detailedRepos = allRepos.map((repo: {
+        name: string;
+        fullName: string;
+        description: string | null;
+        url: string;
+        forkCount: number;
+        stargazerCount: number;
+        watchers: { totalCount: number };
+        issues: { totalCount: number };
+        repositoryTopics: { nodes: Array<{ topic: { name: string } }> };
+        createdAt: string;
+        updatedAt: string;
+        pushedAt: string;
+        defaultBranchRef: { name: string } | null;
+        isPrivate: boolean;
+        languages: { edges: Array<{ size: number; node: { name: string } }> };
+        isFork: boolean;
+        parent: { nameWithOwner: string } | null;
+      }) => {
+        // Only count forks that were created by the user (not inherited from parent)
+        if (repo.isFork || repo.fullName.includes(username)) {
+          totalForks += repo.forkCount;
+          totalStars += repo.stargazerCount;
+        }
 
-          totalForks += repo.forks_count
-          totalStars += repo.stargazers_count
+        // Process languages
+        const languages: { [key: string]: number } = {};
+        repo.languages.edges.forEach((edge: any) => {
+          const language = edge.node.name;
+          const size = edge.size;
+          languages[language] = size;
+          
+          if (totalLanguageLinesOfCode[language]) {
+            totalLanguageLinesOfCode[language] += size;
+          } else {
+            totalLanguageLinesOfCode[language] = size;
+          }
+        });
 
-          const detailedRepo = {
-            name: repo.name,
-            full_name: repo.full_name,
-            description: repo.description,
-            html_url: repo.html_url,
-            forks_count: repo.forks_count,
-            stargazers_count: repo.stargazers_count,
-            watchers_count: repo.watchers_count,
-            open_issues_count: repo.open_issues_count,
-            topics: repo.topics,
-            created_at: repo.created_at,
-            updated_at: repo.updated_at,
-            pushed_at: repo.pushed_at,
-            default_branch: repo.default_branch,
-            visibility: repo.visibility,
-            languages,
-          };
-          console.log(`Detailed information retrieved for repo: ${repo.full_name}`);
-          return detailedRepo;
-        })
-      );
-  
+        return {
+          name: repo.name,
+          full_name: repo.fullName,
+          description: repo.description,
+          html_url: repo.url,
+          forks_count: repo.isFork ? 0 : repo.forkCount,
+          stargazers_count: repo.stargazerCount,
+          watchers_count: repo.watchers.totalCount,
+          open_issues_count: repo.issues.totalCount,
+          topics: repo.repositoryTopics.nodes.map((node: any) => node.topic.name),
+          created_at: repo.createdAt,
+          updated_at: repo.updatedAt,
+          pushed_at: repo.pushedAt,
+          default_branch: repo.defaultBranchRef?.name,
+          visibility: repo.isPrivate ? 'private' : 'public',
+          languages,
+          is_fork: repo.isFork,
+          parent_repo: repo.parent?.nameWithOwner
+        };
+      });
+
       console.log(`Completed fetching detailed information for all ${detailedRepos.length} repositories`);
-      return {detailedRepos, totalForks, totalStars, totalLanguageLinesOfCode};
+      return { detailedRepos, totalForks, totalStars, totalLanguageLinesOfCode };
     }
 
     async fetchUserOrganizations(username: string): Promise<any[]> {
