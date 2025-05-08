@@ -36,34 +36,114 @@ export class OnchainDataManager {
                 
                 // Get all transfers for the address
                 console.log(`[getTransfersForAddresses] Fetching outgoing transfers for ${address}`);
-                const transfersForAddress = await this.alchemy.core.getAssetTransfers({
-                    fromBlock: fromBlock?.toString(),
-                    toBlock: toBlock?.toString(),
-                    fromAddress: address,
-                    excludeZeroValue: false,
-                    category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.INTERNAL],
-                });
 
-                console.log("response: ",transfersForAddress);
-
-                if (transfersForAddress.transfers) {
-                    console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
-                    transfers.push(...transfersForAddress.transfers);
+                if(this.network.includes("sepolia") || this.network === Network.BASE_MAINNET){
+                    const transfersForAddress = await this.alchemy.core.getAssetTransfers({
+                        fromBlock: fromBlock?.toString(),
+                        toBlock: toBlock?.toString(),
+                        fromAddress: address,
+                        excludeZeroValue: false,
+                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721],
+                    });
+    
+                    console.log("response: ",transfersForAddress);
+    
+                    if (transfersForAddress.transfers) {
+                        console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
+                        // Add block information to each transfer
+                        const transfersWithDates = await Promise.all(
+                            transfersForAddress.transfers.map(async (transfer) => {
+                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                return {
+                                    ...transfer,
+                                    timestamp: block.timestamp,
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                };
+                            })
+                        );
+                        transfers.push(...transfersWithDates);
+                    }
+                }else {
+                    const transfersForAddress = await this.alchemy.core.getAssetTransfers({
+                        fromBlock: fromBlock?.toString(),
+                        toBlock: toBlock?.toString(),
+                        fromAddress: address,
+                        excludeZeroValue: false,
+                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC1155, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.INTERNAL],
+                    });
+    
+                    console.log("response: ",transfersForAddress);
+    
+                    if (transfersForAddress.transfers) {
+                        console.log(`[getTransfersForAddresses] Found ${transfersForAddress.transfers.length} outgoing transfers for ${address}`);
+                        // Add block information to each transfer
+                        const transfersWithDates = await Promise.all(
+                            transfersForAddress.transfers.map(async (transfer) => {
+                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                return {
+                                    ...transfer,
+                                    timestamp: block.timestamp,
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                };
+                            })
+                        );
+                        transfers.push(...transfersWithDates);
+                    }
                 }
+                
 
                 // Also get transfers to this address
                 console.log(`[getTransfersForAddresses] Fetching incoming transfers for ${address}`);
-                const transfersToAddress = await this.alchemy.core.getAssetTransfers({
-                    fromBlock: fromBlock?.toString(),
-                    toBlock: toBlock?.toString(),
-                    toAddress: address,
-                    category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.INTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
-                });
 
-                if (transfersToAddress.transfers) {
-                    console.log(`[getTransfersForAddresses] Found ${transfersToAddress.transfers.length} incoming transfers for ${address}`);
-                    transfers.push(...transfersToAddress.transfers);
+                if(this.network.includes("sepolia") || this.network === Network.BASE_MAINNET){
+                    const transfersToAddress = await this.alchemy.core.getAssetTransfers({
+                        fromBlock: fromBlock?.toString(),
+                        toBlock: toBlock?.toString(),
+                        toAddress: address,
+                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
+                    });
+    
+                    if (transfersToAddress.transfers) {
+                        console.log(`[getTransfersForAddresses] Found ${transfersToAddress.transfers.length} incoming transfers for ${address}`);
+                        // Add block information to each transfer
+                        const transfersWithDates = await Promise.all(
+                            transfersToAddress.transfers.map(async (transfer) => {
+                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                return {
+                                    ...transfer,
+                                    timestamp: block.timestamp,
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                };
+                            })
+                        );
+                        transfers.push(...transfersWithDates);
+                    }
+
+                }else{
+                    const transfersToAddress = await this.alchemy.core.getAssetTransfers({
+                        fromBlock: fromBlock?.toString(),
+                        toBlock: toBlock?.toString(),
+                        toAddress: address,
+                        category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.INTERNAL, AssetTransfersCategory.ERC20, AssetTransfersCategory.ERC721, AssetTransfersCategory.ERC1155],
+                    });
+    
+                    if (transfersToAddress.transfers) {
+                        console.log(`[getTransfersForAddresses] Found ${transfersToAddress.transfers.length} incoming transfers for ${address}`);
+                        // Add block information to each transfer
+                        const transfersWithDates = await Promise.all(
+                            transfersToAddress.transfers.map(async (transfer) => {
+                                const block = await this.alchemy.core.getBlock(transfer.blockNum);
+                                return {
+                                    ...transfer,
+                                    timestamp: block.timestamp,
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                };
+                            })
+                        );
+                        transfers.push(...transfersWithDates);
+                    }
                 }
+                
             }
 
             console.log(`[getTransfersForAddresses] Completed. Retrieved ${transfers.length} total transfers`);
@@ -95,13 +175,20 @@ export class OnchainDataManager {
      * @param deployerAddress Address that deployed the contracts
      * @param startBlock Starting block number
      * @param endBlock Ending block number
-     * @returns Array of contract addresses with their deployment details
+     * @returns Array of contract addresses with their deployment details and metrics
      */
     async getContractsDeployedByAddress(
         deployerAddress: string,
         startBlock: number | string,
         endBlock: number | string
-    ): Promise<Array<{ address: string; blockNumber: number; }>> {
+    ): Promise<Array<{
+        address: string;
+        blockNumber: number;
+        deploymentDate: string;
+        uniqueUsers: number;
+        tvl: string;
+        totalTransactions: number;
+    }>> {
         try {
             console.log(`[getContractsDeployedByAddress] Starting contract search for deployer: ${deployerAddress}`);
             console.log(`[getContractsDeployedByAddress] Block range: ${startBlock} to ${endBlock}`);
@@ -110,8 +197,8 @@ export class OnchainDataManager {
             // Get all transactions from the deployer address
             console.log(`[getContractsDeployedByAddress] Fetching transactions for ${deployerAddress}`);
             const response = await this.alchemy.core.getAssetTransfers({
-                fromBlock: startBlock.toString(),
-                toBlock: endBlock.toString(),
+                fromBlock: typeof startBlock === 'number' ? `0x${startBlock.toString(16)}` : startBlock,
+                toBlock: typeof endBlock === 'number' ? `0x${endBlock.toString(16)}` : endBlock,
                 fromAddress: deployerAddress,
                 excludeZeroValue: false,
                 category: [AssetTransfersCategory.EXTERNAL],
@@ -125,61 +212,72 @@ export class OnchainDataManager {
 
             console.log("response: ",deployments[1]);
 
-            const promises = txHashes.map((hash) =>
-                this.alchemy.core.getTransactionReceipt(hash)
+            const receipts = await Promise.all(
+                txHashes.map((hash) => this.alchemy.core.getTransactionReceipt(hash))
             );
 
+            const contractAddresses = receipts
+                .filter((receipt): receipt is NonNullable<typeof receipt> => receipt !== null && receipt.contractAddress !== undefined)
+                .map(receipt => ({
+                    address: receipt.contractAddress,
+                    blockNumber: receipt.blockNumber
+                }));
 
-            const receipts = await Promise.all(promises);
-            const contractAddresses: Array<{ address: string; blockNumber: number;}> = receipts.map((receipt) => ({address: receipt?.contractAddress || "", blockNumber : receipt?.blockNumber || 0}));
             console.log(`Found ${contractAddresses?.length || 0} Contracts deployed by ${deployerAddress}`);
 
-            return contractAddresses;
+            // Get detailed metrics for each contract
+            const contractsWithMetrics = await Promise.all(
+                contractAddresses.map(async (contract) => {
+                    try {
+                        // Get deployment block for timestamp
+                        const block = await this.alchemy.core.getBlock(contract.blockNumber);
+                        const deploymentDate = new Date(Number(block.timestamp) * 1000).toISOString();
 
-            // const deployedContracts: Array<{ address: string; blockNumber: number; code: string }> = [];
+                        // Get all transfers to/from the contract to calculate unique users and TVL
+                        const transfers = await this.alchemy.core.getAssetTransfers({
+                            fromBlock: `0x${contract.blockNumber.toString(16)}`,
+                            toBlock: 'latest',
+                            toAddress: contract.address,
+                            category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20],
+                        });
 
-            // // Process each transaction
-            // for (const transfer of transfers.transfers || []) {
-            //     try {
-            //         console.log(`[getContractsDeployedByAddress] Processing transaction: ${transfer.hash}`);
-                    
-            //         // Get the transaction receipt to check if it's a contract creation
-            //         const receipt = await this.alchemy.core.getTransactionReceipt(transfer.hash);
-                    
-            //         if (receipt && receipt.contractAddress) {
-            //             console.log(`[getContractsDeployedByAddress] Found contract deployment at address: ${receipt.contractAddress}`);
-            //             console.log(`[getContractsDeployedByAddress] Contract deployed in block: ${receipt.blockNumber}`);
-                        
-            //             // Get the contract code
-            //             console.log(`[getContractsDeployedByAddress] Fetching contract code for ${receipt.contractAddress}`);
-            //             const code = await this.alchemy.core.getCode(receipt.contractAddress);
-                        
-            //             // Only include if it's a contract (code length > 2)
-            //             if (code !== '0x') {
-            //                 console.log(`[getContractsDeployedByAddress] Valid contract found at ${receipt.contractAddress}`);
-            //                 console.log(`[getContractsDeployedByAddress] Contract code length: ${code.length}`);
-                            
-            //                 deployedContracts.push({
-            //                     address: receipt.contractAddress,
-            //                     blockNumber: receipt.blockNumber,
-            //                     code: code
-            //                 });
-            //                 console.log(`[getContractsDeployedByAddress] Added contract to results: ${receipt.contractAddress}`);
-            //             } else {
-            //                 console.log(`[getContractsDeployedByAddress] Skipping empty contract at ${receipt.contractAddress}`);
-            //             }
-            //         } else {
-            //             console.log(`[getContractsDeployedByAddress] Transaction ${transfer.hash} is not a contract deployment`);
-            //         }
-            //     } catch (error) {
-            //         console.error(`[getContractsDeployedByAddress] Error processing transaction ${transfer.hash}:`, error);
-            //         continue;
-            //     }
-            // }
+                        // Calculate unique users
+                        const uniqueAddresses = new Set();
+                        transfers.transfers.forEach(transfer => {
+                            uniqueAddresses.add(transfer.from);
+                        });
 
-            // console.log(`[getContractsDeployedByAddress] Search completed. Found ${deployedContracts.length} contracts deployed by ${deployerAddress}`);
-            // console.log(`[getContractsDeployedByAddress] Contract addresses:`, deployedContracts.map(c => c.address));
-            // return deployedContracts;
+                        // Calculate TVL (sum of all incoming transfers)
+                        const tvl = transfers.transfers.reduce((acc, transfer) => {
+                            return acc + (transfer.value ? Number(transfer.value) : 0);
+                        }, 0).toString();
+
+                        // Get total number of transactions
+                        const totalTransactions = transfers.transfers.length;
+
+                        return {
+                            address: contract.address,
+                            blockNumber: contract.blockNumber,
+                            deploymentDate,
+                            uniqueUsers: uniqueAddresses.size,
+                            tvl,
+                            totalTransactions
+                        };
+                    } catch (error) {
+                        console.error(`Error getting metrics for contract ${contract.address}:`, error);
+                        return {
+                            address: contract.address,
+                            blockNumber: contract.blockNumber,
+                            deploymentDate: '',
+                            uniqueUsers: 0,
+                            tvl: '0',
+                            totalTransactions: 0
+                        };
+                    }
+                })
+            );
+
+            return contractsWithMetrics;
         } catch (error) {
             console.error('[getContractsDeployedByAddress] Error fetching deployed contracts:', error);
             throw error;

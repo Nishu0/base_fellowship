@@ -27,7 +27,8 @@ export class FbiController {
                 include: {
                     githubData: true,
                     contractsData: true,
-                    onchainData: true
+                    onchainData: true,
+                    userScore: true
                 }
             });
 
@@ -55,6 +56,8 @@ export class FbiController {
                         onchainData: {
                             create: {
                                 history: [],
+                                contractStats: {},
+                                transactionStats: {},
                                 status: DataStatus.PENDING
                             }
                         }
@@ -62,7 +65,8 @@ export class FbiController {
                     include: {
                         githubData: true,
                         contractsData: true,
-                        onchainData: true
+                        onchainData: true,
+                        userScore: true
                     }
                 });
                 await analyzeQueue.addToQueue(request);
@@ -89,7 +93,8 @@ export class FbiController {
                         organizations: user.githubData?.orgs,
                         contributionData: user.githubData?.languagesData,
                         contractsDeployed: user.contractsData?.contracts,
-                        onchainHistory: user.onchainData?.history
+                        onchainHistory: user.onchainData?.history,
+                        score: user.userScore
                     }
                 });
                 return;
@@ -114,14 +119,15 @@ export class FbiController {
 
     async checkProcessingStatus(req: Request, res: Response): Promise<void> {
         try {
-            const githubUsername = req.params.githubUsername;
-            
+            const { githubUsername } = req.params;
+
             const user = await prisma.user.findFirst({
                 where: { githubId: githubUsername },
                 include: {
                     githubData: true,
                     contractsData: true,
-                    onchainData: true
+                    onchainData: true,
+                    userScore: true
                 }
             });
 
@@ -133,35 +139,10 @@ export class FbiController {
                 return;
             }
 
-            // Check if any data type has failed
-            const hasFailed = [
-                user.githubData?.status,
-                user.contractsData?.status,
-                user.onchainData?.status
-            ].some(status => status === DataStatus.FAILED);
-
-            if (hasFailed) {
-                res.status(200).json({
-                    success: false,
-                    data: {
-                        status: "FAILED",
-                        message: "Data processing failed",
-                        details: {
-                            githubData: user.githubData?.status,
-                            contractsData: user.contractsData?.status,
-                            onchainData: user.onchainData?.status
-                        }
-                    }
-                });
-                return;
-            }
-
-            // Check if all data types are completed
-            const isCompleted = [
-                user.githubData?.status,
-                user.contractsData?.status,
-                user.onchainData?.status
-            ].every(status => status === DataStatus.COMPLETED);
+            const isCompleted = user.dataStatus === DataStatus.COMPLETED &&
+                user.githubData?.status === DataStatus.COMPLETED &&
+                user.contractsData?.status === DataStatus.COMPLETED &&
+                user.onchainData?.status === DataStatus.COMPLETED;
 
             if (isCompleted) {
                 res.status(200).json({
@@ -173,7 +154,10 @@ export class FbiController {
                         organizations: user.githubData?.orgs,
                         contributionData: user.githubData?.languagesData,
                         contractsDeployed: user.contractsData?.contracts,
-                        onchainHistory: user.onchainData?.history
+                        onchainHistory: user.onchainData?.history,
+                        contractStats: user.onchainData?.contractStats,
+                        transactionStats: user.onchainData?.transactionStats,
+                        score: user.userScore
                     }
                 });
                 return;

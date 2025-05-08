@@ -18,6 +18,7 @@ model User {
   githubData   GithubData?
   contractsData ContractsData?
   onchainData  OnchainData?
+  userScore    UserScore?
   lastFetchedAt DateTime?
   dataStatus   DataStatus?
 }
@@ -66,6 +67,29 @@ model OnchainData {
   history Json
   status DataStatus @default(PENDING)
   lastFetchedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contractStats Json
+  transactionStats Json
+}
+
+model UserScore {
+  id String @id @default(uuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalScore Float @default(0)
+  metrics Json // Stores individual metric scores and calculations
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformConfig {
+  id String @id @default(uuid())
+  name String @unique
+  description String?
+  thresholds Json
+  weights Json
+  enabledChains Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
