@@ -4,6 +4,14 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import Link from "next/link";
 import { 
@@ -26,7 +34,9 @@ import {
   GitPullRequest,
   GitCommit,
   Layers,
-  Share2
+  Share2,
+  Copy,
+  Check
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/axiosClient";
@@ -96,6 +106,42 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
+  const [isCopied, setIsCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  
+  // Get current URL for sharing
+  const getShareUrl = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.href;
+    }
+    return `https://fellowship.io/user/${username}`;
+  };
+  
+  // Copy URL to clipboard
+  const copyToClipboard = () => {
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(getShareUrl()).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      });
+    }
+  };
+  
+  // Generate Twitter share URL
+  const getTwitterShareUrl = () => {
+    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareUrl())}`;
+  };
+  
+  // Generate Warpcast share URL
+  const getWarpcastShareUrl = () => {
+    if (!userData) return '';
+    const githubScore = userData.score?.metrics?.web2?.total || 0;
+    const onchainScore = userData.score?.metrics?.web3?.total || 0;
+    const overallScore = Math.round((githubScore + onchainScore) / 2);
+    
+    const shareText = `Check out ${userData.userData.name || username}'s profile on Klyro!\n\nGitHub Score: ${githubScore}/100\nOnchain Score: ${onchainScore}/100\nOverall: ${overallScore}/100`;
+    return `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(getShareUrl())}`;
+  };
   
   // Fetch user data from API
   useEffect(() => {
@@ -518,10 +564,60 @@ export default function UserProfilePage() {
                   </Button>
                 </Link>
               </div>
-              <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700" onClick={() => window.navigator.clipboard.writeText(window.location.href)}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Share Profile
-              </Button>
+              <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share Profile
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md bg-zinc-950 border border-zinc-800">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold mb-2">Share this profile</DialogTitle>
+                    <DialogDescription className="text-zinc-400">
+                      Share {user.name}'s developer profile with your network
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex flex-col space-y-4 mt-4">
+                    <a 
+                      href={getTwitterShareUrl()} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a94e1] text-white py-2 px-4 rounded-lg font-medium"
+                    >
+                      <Twitter className="h-5 w-5" />
+                      Share on Twitter
+                    </a>
+                    <a 
+                      href={getWarpcastShareUrl()} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 16 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.7143 0H2.28571C1.02335 0 0 1.02335 0 2.28571V9.14286C0 10.4052 1.02335 11.4286 2.28571 11.4286H13.7143C14.9767 11.4286 16 10.4052 16 9.14286V2.28571C16 1.02335 14.9767 0 13.7143 0ZM11.8412 4.2473L7.84121 8.2473C7.7555 8.33301 7.63952 8.38095 7.5 8.38095C7.36048 8.38095 7.2445 8.33301 7.15879 8.2473L4.15879 5.2473C3.97826 5.06677 3.97826 4.78061 4.15879 4.60008C4.33932 4.41955 4.62548 4.41955 4.80601 4.60008L7.5 7.29407L11.194 3.60008C11.3745 3.41955 11.6607 3.41955 11.8412 3.60008C12.0217 3.78061 12.0217 4.06677 11.8412 4.2473Z"/>
+                      </svg>
+                      Share on Warpcast
+                    </a>
+                    <button 
+                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-2 px-4 rounded-lg font-medium"
+                      onClick={copyToClipboard}
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="h-5 w-5 text-green-400" />
+                          <span className="text-green-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-5 w-5" />
+                          Copy Link
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -787,9 +883,6 @@ export default function UserProfilePage() {
                                 </div>
                                 <span className="text-lg font-medium">{networkGroup.name}</span>
                               </div>
-                              <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700 px-2 hover:bg-indigo-900/80">
-                                Score: {networkGroup.totalScore}/100
-                              </Badge>
                             </div>
                           </div>
                           
@@ -800,9 +893,6 @@ export default function UserProfilePage() {
                                   <div className="flex items-center">
                                     <span className="font-medium text-indigo-200">{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
                                   </div>
-                                  {/* <Badge className="text-xs bg-indigo-900/70 text-indigo-300 hover:bg-indigo-900/80">
-                                    {chain.score}/100
-                                  </Badge> */}
                                 </div>
                                 
                                 <div className="grid grid-cols-3 gap-2 text-center mb-2">
