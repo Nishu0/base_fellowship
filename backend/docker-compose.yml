@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:3001"  # Changed external port to 8000
+      - "8000:8000"  # Changed external port to 8000
     env_file:
       - .env
     environment:
