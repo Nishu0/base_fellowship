@@ -1,9 +1,9 @@
-https://api.klyro.dev/ {
-    redir https://api.klyro.dev/{uri}
+https://api.klyro.dev {
+    redir https://api.klyro.dev{uri}
 }
 
 # HTTPS Server
-https://api.klyro.dev/{
+https://api.klyro.dev {
     encode gzip
     log {
         output file /var/log/caddy/access.log
