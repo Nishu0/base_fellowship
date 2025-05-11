@@ -77,23 +77,58 @@ export class FbiService {
             const userRepoData = await githubHelper.fetchUserReposWithDetails(githubUsername);
             const organizations = await githubHelper.fetchUserOrganizations(githubUsername);
             
+            // Get contributions for last 4 years
             const now = new Date();
-            const nowISOString = now.toISOString().split('.')[0] + 'Z';
-            const twoYearsAgo = new Date(now);
-            twoYearsAgo.setUTCFullYear(now.getUTCFullYear() - 1);
-            const twoYearsAgoISOString = twoYearsAgo.toISOString().split('.')[0] + 'Z';
+            const mergedContributions : any = {
+                totalContributions: 0,
+                contributionCalendar: {
+                    totalContributions: 0,
+                    weeks: []
+                },
+                totalPRs: 0,
+                totalIssues: 0,
+                repoContributions: {}
+            };
+            
+            // Loop through last 4 years
+            for (let i = 0; i < 4; i++) {
+                const endDate = new Date(now);
+                endDate.setUTCFullYear(now.getUTCFullYear() - i);
+                const startDate = new Date(endDate);
+                startDate.setUTCFullYear(endDate.getUTCFullYear() - 1);
+                
+                const endDateISOString = endDate.toISOString().split('.')[0] + 'Z';
+                const startDateISOString = startDate.toISOString().split('.')[0] + 'Z';
+                
+                const yearContributions = await githubGraphHelper.getUserContributions(
+                    githubUsername,
+                    startDateISOString,
+                    endDateISOString,
+                );
 
-            const allContributions = await githubGraphHelper.getUserContributions(
-                githubUsername,
-                twoYearsAgoISOString,
-                nowISOString,
-            );
+                // Merge the contributions data
+                mergedContributions.totalContributions += yearContributions.totalContributions;
+                mergedContributions.contributionCalendar.totalContributions += yearContributions.contributionCalendar.totalContributions;
+                mergedContributions.totalPRs += yearContributions.totalPRs;
+                mergedContributions.totalIssues += yearContributions.totalIssues;
+                
+                // Merge weeks
+                mergedContributions.contributionCalendar.weeks = [
+                    ...yearContributions.contributionCalendar.weeks,
+                    ...mergedContributions.contributionCalendar.weeks
+                ];
+
+                // Merge repo contributions
+                for (const [repo, contributions] of Object.entries(yearContributions.repoContributions)) {
+                    mergedContributions.repoContributions[repo] = (mergedContributions.repoContributions[repo] || 0) + contributions;
+                }
+            }
 
             // Convert to plain objects for JSON storage
             const userInfoJson = JSON.parse(JSON.stringify(userData));
             const reposJson = JSON.parse(JSON.stringify(userRepoData));
             const orgsJson = JSON.parse(JSON.stringify(organizations));
-            const contributionsJson = JSON.parse(JSON.stringify(allContributions));
+            const contributionsJson = JSON.parse(JSON.stringify(mergedContributions));
 
             await prisma.githubData.update({
                 where: { userId },

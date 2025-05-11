@@ -8,23 +8,23 @@ const defaultConfig = {
     description: "Default platform configuration",
     thresholds: {
         // Web3 thresholds
-        mainnetContracts: 5,
-        testnetContracts: 3,
-        mainnetTVL: 1000000, // 1M
+        mainnetContracts: 40,
+        testnetContracts: 100,
+        mainnetTVL: 10000, // 10K
         uniqueUsers: 100,
-        transactions: 100,
-        web3Languages: 10000,
+        transactions: 3000,
+        web3Languages: 246639660,
         cryptoRepoContributions: 50,
 
         // Web2 thresholds
-        prs: 20,
-        contributions: 1000,
-        forks: 50,
-        stars: 100,
-        issues: 30,
-        totalLinesOfCode: 50000,
-        accountAge: 365, // 1 year in days
-        followers: 100
+        prs: 100,
+        contributions: 10634,
+        forks: 56488,
+        stars: 196965,
+        issues: 10,
+        totalLinesOfCode: 2466396600,
+        accountAge: 4998, //  year in days
+        followers: 234058
     },
     weights: {
         // Web3 weights
