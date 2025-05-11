@@ -12,7 +12,7 @@ https://api.klyro.dev/{
     @api {
         path /api/*
     }
-    reverse_proxy @api backend:3001 {
+    reverse_proxy @api backend:8000 {
         header_up Host {host}
         header_up Referer {http.referer}
         header_up X-Real-IP {remote_host}
@@ -21,7 +21,7 @@ https://api.klyro.dev/{
     }
     
     # All other paths go to the backend service
-    reverse_proxy backend:3001 {
+    reverse_proxy backend:8000 {
         header_up Host {host}
         header_up Referer {http.referer}
         header_up X-Real-IP {remote_host}
