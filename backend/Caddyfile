@@ -1,4 +1,4 @@
-https://api.klyro.dev {
+http://api.klyro.dev {
     redir https://api.klyro.dev{uri}
 }
 
