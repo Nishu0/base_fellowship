@@ -21,6 +21,8 @@ model User {
   userScore    UserScore?
   lastFetchedAt DateTime?
   dataStatus   DataStatus?
+  developerWorth  DeveloperWorth?
+
 }
 
 model Wallet {
@@ -90,8 +92,24 @@ model PlatformConfig {
   thresholds Json
   weights Json
   enabledChains Json
+  developerWorthMultipliers Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DeveloperWorth {
+    id              String   @id @default(cuid())
+    userId          String   @unique
+    totalWorth      Float
+    breakdown       Json
+    details         Json
+    lastCalculatedAt DateTime
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    user            User     @relation(fields: [userId], references: [id])
+
+    @@index([userId])
 }
 
 enum DataStatus {

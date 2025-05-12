@@ -25,8 +25,11 @@ export class FbiService {
                 this.extractOnchainData(request, user)
             ]);
 
-            // Calculate user score
-            await scoreService.calculateUserScore(user.id);
+            // Calculate user score and developer worth
+            await Promise.all([
+                scoreService.calculateUserScore(user.id),
+                scoreService.calculateDeveloperWorth(user.id)
+            ]);
 
             // Update user's last fetched timestamp and status
             await prisma.user.update({
@@ -38,6 +41,8 @@ export class FbiService {
             });
         } catch (error) {
             // Update user status to failed if any error occurs
+
+            console.log("Error in processUserData", error)
             const user = await prisma.user.findFirst({
                 where: { githubId: request.githubUsername }
             });

@@ -28,7 +28,8 @@ export class FbiController {
                     githubData: true,
                     contractsData: true,
                     onchainData: true,
-                    userScore: true
+                    userScore: true,
+                    developerWorth: true
                 }
             });
 
@@ -66,7 +67,8 @@ export class FbiController {
                         githubData: true,
                         contractsData: true,
                         onchainData: true,
-                        userScore: true
+                        userScore: true,
+                        developerWorth: true
                     }
                 });
                 await analyzeQueue.addToQueue(request);
@@ -94,7 +96,8 @@ export class FbiController {
                         contributionData: user.githubData?.languagesData,
                         contractsDeployed: user.contractsData?.contracts,
                         onchainHistory: user.onchainData?.history,
-                        score: user.userScore
+                        score: user.userScore,
+                        developerWorth: user.developerWorth
                     }
                 });
                 return;
@@ -127,7 +130,8 @@ export class FbiController {
                     githubData: true,
                     contractsData: true,
                     onchainData: true,
-                    userScore: true
+                    userScore: true,
+                    developerWorth: true
                 }
             });
 
@@ -157,7 +161,8 @@ export class FbiController {
                         onchainHistory: user.onchainData?.history,
                         contractStats: user.onchainData?.contractStats,
                         transactionStats: user.onchainData?.transactionStats,
-                        score: user.userScore
+                        score: user.userScore,
+                        developerWorth: user.developerWorth
                     }
                 });
                 return;

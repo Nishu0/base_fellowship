@@ -72,16 +72,20 @@ export class GitHubHelper {
       const query = `
         query($username: String!) {
           user(login: $username) {
-            login
+            avatarUrl
             name
+            login
+            bio
+            location
             createdAt
-            repositories(first: 100, privacy: PUBLIC) {
-              totalCount
-            }
+            url
+            twitterUsername
+            email
+            websiteUrl
             followers {
               totalCount
             }
-            following {
+            repositories(privacy: PUBLIC) {
               totalCount
             }
           }
@@ -94,13 +98,21 @@ export class GitHubHelper {
       const createdAt = new Date(user.createdAt);
       const now = new Date();
       const accountAgeInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-      const accountAgeInYears = Math.floor(accountAgeInDays / 365);
-      const remainingDays = accountAgeInDays % 365;
 
       return {
-        ...user,
+        avatar_url: user.avatarUrl,
+        name: user.name,
+        login: user.login,
+        bio: user.bio,
+        location: user.location,
+        created_at: user.createdAt,
+        html_url: user.url,
+        twitter_username: user.twitterUsername,
+        email: user.email,
+        blog: user.websiteUrl,
         followers: user.followers.totalCount,
-        accountAge: accountAgeInDays
+        public_repos: user.repositories.totalCount,
+        accountAge: accountAgeInDays,
       };
     }
   

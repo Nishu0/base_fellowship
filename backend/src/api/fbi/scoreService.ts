@@ -368,4 +368,236 @@ export class ScoreService {
 
         return totalWeb2Score;
     }
+
+    async calculateDeveloperWorth(userId: string): Promise<void> {
+        try {
+            // Get user data
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                include: {
+                    githubData: true,
+                    contractsData: true,
+                    onchainData: true
+                }
+            });
+
+            if (!user) throw new Error("User not found");
+
+            // Initialize worth components
+            const worth = {
+                totalWorth: 0,
+                breakdown: {
+                    web3Worth: 0,
+                    web2Worth: 0
+                },
+                details: {
+                    experienceValue: 0,
+                    influenceValue: 0,
+                    skillValue: 0
+                }
+            };
+
+            // Calculate Web3 Worth (60% of total)
+            const web3Worth = await this.calculateWeb3DeveloperWorth(user);
+            worth.breakdown.web3Worth = web3Worth.totalWorth;
+            worth.details.experienceValue += web3Worth.web3Metrics.experienceValue;
+            worth.details.skillValue += web3Worth.web3Metrics.skillValue;
+            worth.details.influenceValue += web3Worth.web3Metrics.influenceValue;
+
+            // Calculate Web2 Worth (40% of total)
+            const web2Worth = await this.calculateWeb2DeveloperWorth(user);
+            worth.breakdown.web2Worth = web2Worth.totalWorth;
+            worth.details.experienceValue += web2Worth.web2Metrics.experienceValue;
+            worth.details.skillValue += web2Worth.web2Metrics.skillValue;
+            worth.details.influenceValue += web2Worth.web2Metrics.influenceValue;
+
+            // Calculate total worth
+            worth.totalWorth = worth.breakdown.web3Worth + worth.breakdown.web2Worth;
+
+            // Update or create developer worth in database
+            await prisma.developerWorth.upsert({
+                where: { userId },
+                create: {
+                    userId,
+                    totalWorth: worth.totalWorth,
+                    breakdown: worth.breakdown,
+                    details: worth.details,
+                    lastCalculatedAt: new Date()
+                },
+                update: {
+                    totalWorth: worth.totalWorth,
+                    breakdown: worth.breakdown,
+                    details: worth.details,
+                    lastCalculatedAt: new Date()
+                }
+            });
+        } catch (error) {
+            console.error("Error calculating developer worth:", error);
+            throw error;
+        }
+    }
+
+    private async calculateWeb3DeveloperWorth(user: any): Promise<{totalWorth: number, web3Metrics: any}> {
+        let totalWorth = 0;
+        const web3Metrics = {
+            experienceValue: 0,
+            skillValue: 0,
+            influenceValue: 0
+        };
+
+        // Get platform configuration
+        const platformConfig = await prisma.platformConfig.findUnique({
+            where: { name: "default" }
+        });
+
+        const multipliers = platformConfig?.developerWorthMultipliers?.web3 || {
+            experience: {
+                mainnetContract: 2000,
+                testnetContract: 500,
+                cryptoRepoContribution: 200
+            },
+            skill: {
+                solidity: 0.02,
+                rust: 0.03,
+                move: 0.025,
+                cadence: 0.025
+            },
+            influence: {
+                tvlMultiplier: 0.0001,
+                uniqueUser: 20,
+                transaction: 2
+            }
+        };
+
+        // 1. Experience Value (30% of Web3 worth)
+        const contractStats = user.onchainData?.contractStats as any;
+        const mainnetContracts = contractStats?.total?.mainnet || 0;
+        const testnetContracts = contractStats?.total?.testnet || 0;
+        
+        web3Metrics.experienceValue = (mainnetContracts * multipliers.experience.mainnetContract) + 
+                                    (testnetContracts * multipliers.experience.testnetContract);
+
+        // Add crypto repo contributions
+        const githubData = user.githubData;
+        if (githubData) {
+            const repos = githubData.repos as any;
+            const contributions = repos.repoContributions || {};
+            
+            let totalCryptoContributions = 0;
+            CRYPTO_REPOS.forEach(repo => {
+                totalCryptoContributions += contributions[repo] || 0;
+            });
+            web3Metrics.experienceValue += totalCryptoContributions * multipliers.experience.cryptoRepoContribution;
+        }
+
+        // 2. Skill Value (40% of Web3 worth)
+        if (githubData) {
+            const repos = githubData.repos as any;
+            const languages = repos.totalLanguageLinesOfCode || {};
+            
+            const web3Languages = {
+                Solidity: languages.Solidity || 0,
+                Rust: languages.Rust || 0,
+                Move: languages.Move || 0,
+                Cadence: languages.Cadence || 0
+            };
+
+            web3Metrics.skillValue = (
+                (web3Languages.Solidity * multipliers.skill.solidity) +
+                (web3Languages.Rust * multipliers.skill.rust) +
+                (web3Languages.Move * multipliers.skill.move) +
+                (web3Languages.Cadence * multipliers.skill.cadence)
+            );
+        }
+
+        // 3. Influence Value (30% of Web3 worth)
+        const contracts = user.contractsData?.contracts as any;
+        let totalTVL = 0;
+        let uniqueUsers = new Set();
+
+        Object.values(contracts || {}).forEach((chainContracts: any) => {
+            chainContracts.forEach((contract: any) => {
+                totalTVL += Number(contract.tvl || 0);
+                uniqueUsers.add(contract.uniqueUsers);
+            });
+        });
+
+        const transactionStats = user.onchainData?.transactionStats as any;
+        const mainnetStats = transactionStats?.total?.mainnet || {};
+        const totalTxs = (mainnetStats.external || 0) + (mainnetStats.internal || 0);
+
+        web3Metrics.influenceValue = (totalTVL * multipliers.influence.tvlMultiplier) + 
+                                   (uniqueUsers.size * multipliers.influence.uniqueUser) + 
+                                   (totalTxs * multipliers.influence.transaction);
+
+        // Calculate total Web3 worth
+        totalWorth = web3Metrics.experienceValue + web3Metrics.skillValue + web3Metrics.influenceValue;
+
+        return {totalWorth, web3Metrics};
+    }
+
+    private async calculateWeb2DeveloperWorth(user: any): Promise<{totalWorth: number, web2Metrics: any}> {
+        let totalWorth = 0;
+        const web2Metrics = {
+            experienceValue: 0,
+            skillValue: 0,
+            influenceValue: 0
+        };
+
+        // Get platform configuration
+        const platformConfig = await prisma.platformConfig.findUnique({
+            where: { name: "default" }
+        });
+
+        const multipliers = platformConfig?.developerWorthMultipliers?.web2 || {
+            experience: {
+                accountAge: 20,
+                pr: 100,
+                contribution: 10
+            },
+            skill: {
+                lineOfCode: 0.00001
+            },
+            influence: {
+                star: 20,
+                fork: 40,
+                follower: 10
+            }
+        };
+
+        const githubData = user.githubData;
+        if (githubData) {
+            const userInfo = githubData.userInfo as any;
+            const repos = githubData.repos as any;
+
+            // 1. Experience Value (30% of Web2 worth)
+            const accountAge = userInfo.accountAge || 0;
+            const totalPRs = githubData.languagesData.totalPRs || 0;
+            const totalContributions = githubData.languagesData.totalContributions || 0;
+
+            web2Metrics.experienceValue = (accountAge * multipliers.experience.accountAge) + 
+                                        (totalPRs * multipliers.experience.pr) + 
+                                        (totalContributions * multipliers.experience.contribution);
+
+            // 2. Skill Value (40% of Web2 worth)
+            const languages = repos.totalLanguageLinesOfCode || {};
+            const totalLOC = Object.values(languages).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
+            
+            web2Metrics.skillValue = totalLOC * multipliers.skill.lineOfCode;
+
+            // 3. Influence Value (30% of Web2 worth)
+            const totalStars = repos.totalStars || 0;
+            const totalForks = repos.totalForks || 0;
+            const followers = userInfo.followers || 0;
+
+            web2Metrics.influenceValue = (totalStars * multipliers.influence.star) + 
+                                       (totalForks * multipliers.influence.fork) + 
+                                       (followers * multipliers.influence.follower);
+        }
+
+        // Calculate total Web2 worth
+        totalWorth = web2Metrics.experienceValue + web2Metrics.skillValue + web2Metrics.influenceValue;
+
+        return {totalWorth, web2Metrics};
+    }
 } 

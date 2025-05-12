@@ -46,6 +46,44 @@ const defaultConfig = {
         accountAge: 10,
         followers: 10
     },
+    // Developer worth multipliers
+    developerWorthMultipliers: {
+        // Web3 multipliers
+        web3: {
+            experience: {
+                mainnetContract: 2000,    // Reduced from 5000
+                testnetContract: 500,     // Reduced from 2000
+                cryptoRepoContribution: 200 // Reduced from 1000
+            },
+            skill: {
+                solidity: 0.02,           // Reduced from 0.1
+                rust: 0.03,              // Reduced from 0.15
+                move: 0.025,             // Reduced from 0.12
+                cadence: 0.025           // Reduced from 0.12
+            },
+            influence: {
+                tvlMultiplier: 0.0001,    // Reduced from 0.001
+                uniqueUser: 20,           // Reduced from 100
+                transaction: 2            // Reduced from 10
+            }
+        },
+        // Web2 multipliers
+        web2: {
+            experience: {
+                accountAge: 20,           // Reduced from 100
+                pr: 100,                  // Reduced from 500
+                contribution: 10          // Reduced from 50
+            },
+            skill: {
+                lineOfCode: 0.00001       // Reduced from 0.05
+            },
+            influence: {
+                star: 20,                 // Reduced from 100
+                fork: 40,                 // Reduced from 200
+                follower: 10              // Reduced from 50
+            }
+        }
+    },
     enabledChains: {
         [Network.ETH_MAINNET]: true,
         [Network.ETH_SEPOLIA]: true,
@@ -77,6 +115,7 @@ async function initPlatformConfig() {
                 data: {
                     thresholds: defaultConfig.thresholds,
                     weights: defaultConfig.weights,
+                    developerWorthMultipliers: defaultConfig.developerWorthMultipliers,
                     enabledChains: defaultConfig.enabledChains
                 }
             });
