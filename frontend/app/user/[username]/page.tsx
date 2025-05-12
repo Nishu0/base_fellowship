@@ -122,6 +122,12 @@ export default function UserProfilePage() {
         languages: Record<string, number>;
       }>;
     };
+    organizations?: Array<{
+      id: number;
+      login: string;
+      avatar_url: string;
+      description: string;
+    }>;
     contributionData?: {
       totalContributions: number;
       totalPRs: number;
@@ -134,6 +140,7 @@ export default function UserProfilePage() {
           }>;
         }>;
       };
+      repoContributions?: Record<string, number>;
     };
     onchainHistory?: Record<string, Array<{
       date: string;
@@ -629,6 +636,20 @@ console.log("userData",userData);
     return undefined;
   };
 
+  // Add this function before the return statement to get top contributed repos
+  const getTopContributedRepos = () => {
+    if (!userData?.contributionData?.repoContributions) return [];
+    
+    // Convert object to array and sort by contribution count
+    return Object.entries(userData.contributionData.repoContributions)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([repoName, count]) => ({
+        name: repoName,
+        contributions: count
+      }));
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -720,7 +741,8 @@ console.log("userData",userData);
       <div className="pt-8 pb-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6 mb-6">
-            <div className="flex flex-col md:flex-row items-start gap-4">
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              {/* Profile Image and Badge Section */}
               <div className="relative">
                 <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-black">
                   <Image
@@ -736,24 +758,47 @@ console.log("userData",userData);
                 </div>
               </div>
               
-              <div className="flex-1 pt-2 md:pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold flex items-center">
-                    {user.name}
-                    {user.verified && (
-                      <svg className="w-6 h-6 ml-2 text-blue-500" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
-                      </svg>
-                    )}
-                  </h1>
+              {/* User Info Section */}
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h1 className="text-3xl font-bold flex items-center mb-1">
+                      {user.name}
+                    </h1>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-zinc-800 text-zinc-200">@{user.username}</Badge>
+                    </div>
+                  </div>
+                  
+                  {/* Social Media Icons */}
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-zinc-800 text-zinc-200">@{user.username}</Badge>
+                    <Link href={`https://github.com/${user.username}`} target="_blank">
+                      <Button variant="outline" size="icon" className="bg-zinc-900 border-zinc-700 h-10 w-10 rounded-full">
+                        <Github className="h-5 w-5" />
+                      </Button>
+                    </Link>
+                    {user.twitter && (
+                      <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
+                        <Button variant="outline" size="icon" className="bg-zinc-900 border-zinc-700 h-10 w-10 rounded-full">
+                          <svg width="18" height="16" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16.99 0H20.298L13.071 8.26004L21.573 19.5H14.916L9.70202 12.683L3.73597 19.5H0.426L8.15602 10.665L0 0H6.82602L11.539 6.23104L16.99 0ZM15.829 17.52H17.662L5.83002 1.876H3.86297L15.829 17.52Z" fill="#ffffff"></path>
+                          </svg>
+                        </Button>
+                      </Link>
+                    )}
+                    {user.blogUrl && (
+                      <Link href={user.blogUrl} target="_blank">
+                        <Button variant="outline" size="icon" className="bg-zinc-900 border-zinc-700 h-10 w-10 rounded-full">
+                          <Globe className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
                 
                 <p className="text-zinc-300 mb-3">{user.bio}</p>
                 
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mb-4">
                   {user.skills.slice(0, 4).map(skill => (
                     <Badge key={skill} className="bg-zinc-800 text-zinc-200">
                       {skill}
@@ -766,7 +811,7 @@ console.log("userData",userData);
                   )}
                 </div>
                 
-                <div className="flex items-center gap-4 text-sm text-zinc-400">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
                   {user.location && (
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-1" />
@@ -787,27 +832,23 @@ console.log("userData",userData);
                   )}
                 </div>
               </div>
-
-              <div className="flex flex-col gap-3 mt-4 md:mt-10">
-                <div className="flex gap-3">
-                  {user.twitter && (
-                    <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
-                      <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
-                        <Twitter className="h-4 w-4 mr-2" />
-                        Twitter
-                      </Button>
-                    </Link>
-                  )}
-                  <Link href={`https://github.com/${user.username}`} target="_blank">
-                    <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
-                      <Github className="h-4 w-4 mr-2" />
-                      GitHub
-                    </Button>
-                  </Link>
+              
+              {/* Worth and Score Section */}
+              <div className="flex flex-col gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 min-w-[180px]">
+                <div>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Score</h3>
+                  <div className="flex items-end gap-1">
+                    <span className="text-2xl font-bold">{user.scores.overall}</span>
+                    <span className="text-sm text-zinc-500 mb-1">/100</span>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Worth</h3>
+                  <div className="text-2xl font-bold">${formatNumber(user.worth.total)}</div>
                 </div>
                 <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700">
+                    <Button variant="outline" size="sm" className="w-full mt-2 bg-zinc-900 border-zinc-700">
                       <Share2 className="h-4 w-4 mr-2" />
                       Share Profile
                     </Button>
@@ -874,35 +915,6 @@ console.log("userData",userData);
           <div className="flex flex-col md:flex-row items-start gap-6">
             {/* Left Column - Score Overview */}
             <div className="w-full md:w-80 space-y-5">
-             <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <h2 className="text-xl font-semibold mb-5">Worth Overview</h2>
-                
-                <div className="space-y-5">
-                  {/* Overall Score */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Overall Worth</span>
-                      <span className="font-medium">${formatNumber(user.worth.total)}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Onchain Score */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web2 Worth</span>
-                      <span className="font-medium">${formatNumber(user.worth.web2)}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Web2 Score */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web3 Worth</span>
-                      <span className="font-medium">${formatNumber(user.worth.web3)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
               {/* Score Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                 <h2 className="text-xl font-semibold mb-5">Score Overview</h2>
@@ -951,47 +963,35 @@ console.log("userData",userData);
                   </div>
                 </div>
               </div>
-              
-              {/* Chain Activity Card */}
+
+              {/* Worth Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <div className="flex justify-between items-center mb-5">
-                  <h2 className="text-xl font-semibold">Chain Activity</h2>
-                </div>
+                <h2 className="text-xl font-semibold mb-5">Worth Overview</h2>
                 
-                <div className="space-y-3">
-                  {user.chains.map((chain) => (
-                    <div key={chain.name} className="bg-zinc-900/70 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-medium">
-                            {getNetworkIcon(chain.name) ? (
-                              <Image
-                                src={getNetworkIcon(chain.name) as string}
-                                alt={chain.name}
-                                width={20}
-                                height={20}
-                                className="h-4 w-4 object-contain"
-                              />
-                            ) : (
-                              chain.name.charAt(0)
-                            )}
-                          </div>
-                          <span className="font-medium">{chain.name}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="text-xs text-zinc-400 ml-9 mb-2">
-                        <div className="flex justify-between">
-                          <span>Mainnet</span>
-                          <span>{chain.mainnet.transactions} tx</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Testnet</span>
-                          <span>{chain.testnet.transactions} tx</span>
-                        </div>
-                      </div>
+                <div className="space-y-5">
+                  {/* Overall Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Overall Worth</span>
+                      <span className="font-medium">${formatNumber(user.worth.total)}</span>
                     </div>
-                  ))}
+                  </div>
+                  
+                  {/* Onchain Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Web2 Worth</span>
+                      <span className="font-medium">${formatNumber(user.worth.web2)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Web2 Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Web3 Worth</span>
+                      <span className="font-medium">${formatNumber(user.worth.web3)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1221,61 +1221,92 @@ console.log("userData",userData);
                       totalCount={user.githubActivity.totalContributions}
                     />
                   </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-zinc-300 mb-3">GitHub Stats</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                      <div className="bg-zinc-900/70 rounded-lg p-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <GitFork className="h-4 w-4 mr-2 text-zinc-400" />
+                            <span className="text-sm">Forks</span>
+                          </div>
+                          <span className="text-indigo-400 font-medium mt-1">{user.githubActivity.forks}</span>
+                        </div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 mr-2 text-zinc-400" />
+                            <span className="text-sm">Stars</span>
+                          </div>
+                          <span className="text-indigo-400 font-medium mt-1">{user.githubActivity.stars}</span>
+                        </div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <GitPullRequest className="h-4 w-4 mr-2 text-zinc-400" />
+                            <span className="text-sm">PRs</span>
+                          </div>
+                          <span className="text-indigo-400 font-medium mt-1">{user.githubActivity.prs}</span>
+                        </div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <GitCommit className="h-4 w-4 mr-2 text-zinc-400" />
+                            <span className="text-sm">Issues</span>
+                          </div>
+                          <span className="text-indigo-400 font-medium mt-1">{user.githubActivity.issues}</span>
+                        </div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-zinc-400" />
+                            <span className="text-sm">Followers</span>
+                          </div>
+                          <span className="text-indigo-400 font-medium mt-1">{user.githubActivity.followers}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Organizations */}
+                  
                   
                   <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-sm font-medium text-zinc-300 mb-3">GitHub Stats</h3>
+                  <div>
+                      <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Repositories by Contributions</h3>
                       <div className="space-y-3">
-                        <div className="bg-zinc-900/70 rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <GitFork className="h-4 w-4 mr-2 text-zinc-400" />
-                              <span className="text-sm">Forks</span>
+                        {getTopContributedRepos().map((repo, index) => (
+                          <div key={index} className="bg-zinc-900/70 rounded-lg p-3">
+                            <div className="font-medium mb-1 truncate">{repo.name}</div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div className="flex items-center text-xs text-yellow-500">
+                                  <GitCommit className="h-3 w-3 mr-1" />
+                                  {repo.contributions}
+                                </div>
+                              </div>
+                              <a 
+                                href={`https://github.com/${repo.name}`} 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-indigo-400 hover:underline flex items-center"
+                              >
+                                View
+                                <ExternalLink className="ml-1 h-3 w-3" />
+                              </a>
                             </div>
-                            <span className="text-indigo-400 font-medium">{user.githubActivity.forks}</span>
                           </div>
-                        </div>
-                        <div className="bg-zinc-900/70 rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Star className="h-4 w-4 mr-2 text-zinc-400" />
-                              <span className="text-sm">Stars</span>
-                            </div>
-                            <span className="text-indigo-400 font-medium">{user.githubActivity.stars}</span>
-                          </div>
-                        </div>
-                        <div className="bg-zinc-900/70 rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <GitPullRequest className="h-4 w-4 mr-2 text-zinc-400" />
-                              <span className="text-sm">Pull Requests</span>
-                            </div>
-                            <span className="text-indigo-400 font-medium">{user.githubActivity.prs}</span>
-                          </div>
-                        </div>
-                        <div className="bg-zinc-900/70 rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <GitCommit className="h-4 w-4 mr-2 text-zinc-400" />
-                              <span className="text-sm">Issues</span>
-                            </div>
-                            <span className="text-indigo-400 font-medium">{user.githubActivity.issues}</span>
-                          </div>
-                        </div>
-                        <div className="bg-zinc-900/70 rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Users className="h-4 w-4 mr-2 text-zinc-400" />
-                              <span className="text-sm">Followers</span>
-                            </div>
-                            <span className="text-indigo-400 font-medium">{user.githubActivity.followers}</span>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                     
                     <div>
-                      <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Repositories</h3>
+                      <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Repositories by Stars</h3>
                       <div className="space-y-3">
                         {user.githubActivity.topRepos.slice(0, 3).map((repo, index) => (
                           <div key={index} className="bg-zinc-900/70 rounded-lg p-3">
@@ -1307,6 +1338,36 @@ console.log("userData",userData);
                       </div>
                     </div>
                   </div>
+                  {userData?.organizations && userData.organizations.length > 0 && (
+                    <div className="mt-6 mb-6">
+                      <h3 className="text-sm font-medium text-zinc-300 mb-3">Organizations</h3>
+                      <div className="flex flex-wrap gap-3">
+                        {userData.organizations.map(org => (
+                          <a 
+                            key={org.id}
+                            href={`https://github.com/${org.login}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 bg-zinc-900/70 rounded-lg p-2 hover:bg-zinc-800 transition-colors"
+                          >
+                            <Image
+                              src={org.avatar_url}
+                              alt={org.login}
+                              width={32}
+                              height={32}
+                              className="rounded-md h-8 w-8"
+                            />
+                            <div>
+                              <div className="font-medium text-sm">{org.login}</div>
+                              {org.description && (
+                                <div className="text-xs text-zinc-400 max-w-[150px] truncate">{org.description}</div>
+                              )}
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
