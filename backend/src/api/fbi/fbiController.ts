@@ -4,6 +4,7 @@ import { AnalyzeUserRequest } from './fbiModel';
 import { analyzeQueue } from './queue';
 import { PrismaClient, DataStatus } from '@prisma/client';
 import { OnchainDataManager } from '@/common/utils/OnchainDataManager';
+import { Logger } from '@/common/utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -15,12 +16,14 @@ export class FbiController {
     }
 
     async analyzeUser(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'analyzeUser called', { body: req.body });
         try {
             const request: AnalyzeUserRequest = {
                 githubUsername: req.body.githubUsername,
                 addresses: req.body.addresses
             };
 
+            Logger.info('FbiController', 'Checking if user exists', { githubUsername: request.githubUsername });
             // Check if user exists
             let user = await prisma.user.findFirst({
                 where: { githubId: request.githubUsername },
@@ -35,6 +38,7 @@ export class FbiController {
 
             // If user doesn't exist, create and add to queue
             if (!user) {
+                Logger.info('FbiController', 'User not found, creating new user and adding to queue', { githubUsername: request.githubUsername });
                 user = await prisma.user.create({
                     data: {
                         githubId: request.githubUsername,
@@ -72,6 +76,7 @@ export class FbiController {
                     }
                 });
                 await analyzeQueue.addToQueue(request);
+                Logger.info('FbiController', 'User created and added to processing queue', { githubUsername: request.githubUsername });
                 res.status(202).json({
                     success: true,
                     data: {
@@ -87,6 +92,7 @@ export class FbiController {
                 (Date.now() - user.lastFetchedAt.getTime()) < 24 * 60 * 60 * 1000;
 
             if (isDataRecent && user.dataStatus === DataStatus.COMPLETED) {
+                Logger.info('FbiController', 'Returning cached user data', { githubUsername: request.githubUsername });
                 res.status(200).json({
                     success: true,
                     data: {
@@ -96,6 +102,7 @@ export class FbiController {
                         contributionData: user.githubData?.languagesData,
                         contractsDeployed: user.contractsData?.contracts,
                         onchainHistory: user.onchainData?.history,
+                        hackathonData: user.onchainData?.hackathonData,
                         score: user.userScore,
                         developerWorth: user.developerWorth
                     }
@@ -104,6 +111,7 @@ export class FbiController {
             }
 
             // If data needs updating, add to queue
+            Logger.info('FbiController', 'Data not recent or incomplete, adding to queue', { githubUsername: request.githubUsername });
             await analyzeQueue.addToQueue(request);
             res.status(202).json({
                 success: true,
@@ -113,6 +121,7 @@ export class FbiController {
                 }
             });
         } catch (error) {
+            Logger.error('FbiController', 'Error in analyzeUser', { error });
             res.status(500).json({
                 success: false,
                 error: error instanceof Error ? error.message : 'Internal server error'
@@ -121,6 +130,7 @@ export class FbiController {
     }
 
     async checkProcessingStatus(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'checkProcessingStatus called', { params: req.params });
         try {
             const { githubUsername } = req.params;
 
@@ -136,6 +146,7 @@ export class FbiController {
             });
 
             if (!user) {
+                Logger.warn('FbiController', 'User not found in checkProcessingStatus', { githubUsername });
                 res.status(404).json({
                     success: false,
                     error: "User not found"
@@ -149,6 +160,7 @@ export class FbiController {
                 user.onchainData?.status === DataStatus.COMPLETED;
 
             if (isCompleted) {
+                Logger.info('FbiController', 'User processing completed', { githubUsername });
                 res.status(200).json({
                     success: true,
                     data: {
@@ -159,6 +171,7 @@ export class FbiController {
                         contributionData: user.githubData?.languagesData,
                         contractsDeployed: user.contractsData?.contracts,
                         onchainHistory: user.onchainData?.history,
+                        hackathonData: user.onchainData?.hackathonData,
                         contractStats: user.onchainData?.contractStats,
                         transactionStats: user.onchainData?.transactionStats,
                         score: user.userScore,
@@ -169,6 +182,7 @@ export class FbiController {
             }
 
             // If still processing, return current status
+            Logger.info('FbiController', 'User processing in progress', { githubUsername });
             res.status(200).json({
                 success: true,
                 data: {
@@ -181,6 +195,7 @@ export class FbiController {
                 }
             });
         } catch (error) {
+            Logger.error('FbiController', 'Error in checkProcessingStatus', { error });
             res.status(500).json({
                 success: false,
                 error: error instanceof Error ? error.message : 'Internal server error'
@@ -189,12 +204,14 @@ export class FbiController {
     }
 
     async getETHGlobalCredentials(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'getETHGlobalCredentials called', { params: req.params });
         try {
             const address = req.params.address;
-            const credentials = await OnchainDataManager.getETHGlobalCredentials(address);
-            console.log(credentials);
+            const credentials = await OnchainDataManager.getHackathonCredentials(address);
+            Logger.info('FbiController', 'ETHGlobal credentials fetched', { address, credentials });
             res.status(200).json(credentials);
         } catch (error) {
+            Logger.error('FbiController', 'Error in getETHGlobalCredentials', { error });
             res.status(500).json({
                 success: false,
                 error: error instanceof Error ? error.message : 'Internal server error'
@@ -203,6 +220,7 @@ export class FbiController {
     }
     
     async getAllUsersByScore(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'getAllUsersByScore called');
         try {
             const users = await prisma.user.findMany({
                 include: {
@@ -222,6 +240,7 @@ export class FbiController {
                 }
             });
 
+            Logger.info('FbiController', 'Fetched users by score', { count: users.length });
             const formattedUsers = users.map(user => ({
                 githubUsername: user.githubId,
                 userInfo: user.githubData?.userInfo,
@@ -233,6 +252,7 @@ export class FbiController {
                 data: formattedUsers
             });
         } catch (error) {
+            Logger.error('FbiController', 'Error in getAllUsersByScore', { error });
             res.status(500).json({
                 success: false,
                 error: error instanceof Error ? error.message : 'Internal server error'

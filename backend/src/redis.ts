@@ -13,7 +13,7 @@ const redis = new Redis({
   password: REDIS_PASSWORD,
   db: REDIS_DB,
   retryStrategy: (times: number) => {
-    const delay = Math.min(times * 50, 2000);
+    const delay = Math.min(times * 10, 2000);
     return delay;
   },
 });

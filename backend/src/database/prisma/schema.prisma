@@ -73,6 +73,7 @@ model OnchainData {
   updatedAt DateTime @updatedAt
   contractStats Json
   transactionStats Json
+  hackathonData Json?
 }
 
 model UserScore {

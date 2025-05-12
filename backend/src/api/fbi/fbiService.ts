@@ -6,6 +6,7 @@ import { env } from '@/common/utils/envConfig';
 import { GitHubGraphQLHelper } from '@/common/utils/githubHelperGraphql';
 import { PrismaClient, DataStatus, User } from '@prisma/client';
 import { ScoreService } from './scoreService';
+import { Logger } from '@/common/utils/logger';
 
 const prisma = new PrismaClient();
 const scoreService = new ScoreService();
@@ -13,24 +14,59 @@ const scoreService = new ScoreService();
 export class FbiService {
     async processUserData(request: AnalyzeUserRequest): Promise<void> {
         try {
+            Logger.info('FbiService', `Starting processUserData for githubUsername: ${request.githubUsername}`);
             const user = await prisma.user.findFirst({
                 where: { githubId: request.githubUsername }
             });
 
             if (!user) throw new Error("User not found");
 
-            // Process all data in parallel
-            await Promise.all([
-                this.processGithubData(request.githubUsername, user.id),
-                this.extractOnchainData(request, user)
+            // Fetch all related data
+            const [githubData, contractsData, onchainData, userScore, developerWorth] = await Promise.all([
+                prisma.githubData.findUnique({ where: { userId: user.id } }),
+                prisma.contractsData.findUnique({ where: { userId: user.id } }),
+                prisma.onchainData.findUnique({ where: { userId: user.id } }),
+                prisma.userScore.findUnique({ where: { userId: user.id } }),
+                prisma.developerWorth.findUnique({ where: { userId: user.id } })
             ]);
 
-            // Calculate user score and developer worth
-            await Promise.all([
-                scoreService.calculateUserScore(user.id),
-                scoreService.calculateDeveloperWorth(user.id)
-            ]);
+            // Check if each data type needs processing
+            const githubNeedsProcessing = !githubData || githubData.status !== DataStatus.COMPLETED;
+            const onchainNeedsProcessing = !contractsData || contractsData.status !== DataStatus.COMPLETED || !onchainData || onchainData.status !== DataStatus.COMPLETED;
+            const scoreNeedsProcessing = !userScore;
+            const worthNeedsProcessing = !developerWorth;
 
+            // If all are already completed, just update user and return
+            if (!githubNeedsProcessing && !onchainNeedsProcessing && !scoreNeedsProcessing && !worthNeedsProcessing) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        lastFetchedAt: new Date(),
+                        dataStatus: DataStatus.COMPLETED
+                    }
+                });
+                Logger.info('FbiService', `All data already completed for user: ${user.id}. Skipping processing.`);
+                return;
+            }
+
+            Logger.info('FbiService', `User found: ${user.id}. Processing only missing/incomplete data.`);
+            // Process only the missing/incomplete data in parallel
+            const processPromises = [];
+            if (githubNeedsProcessing) processPromises.push(this.processGithubData(request.githubUsername, user.id));
+            if (onchainNeedsProcessing) {
+                processPromises.push(this.extractOnchainData(request, user));
+                processPromises.push(this.extractHackathonData(request, user));
+            }
+            await Promise.all(processPromises);
+
+            Logger.info('FbiService', `GitHub and onchain data processed for user: ${user.id}. Calculating scores if needed.`);
+            // Calculate user score and developer worth if needed
+            const scorePromises = [];
+            if (scoreNeedsProcessing) scorePromises.push(scoreService.calculateUserScore(user.id));
+            if (worthNeedsProcessing) scorePromises.push(scoreService.calculateDeveloperWorth(user.id));
+            await Promise.all(scorePromises);
+
+            Logger.info('FbiService', `Scores calculated for user: ${user.id}. Updating user status to COMPLETED.`);
             // Update user's last fetched timestamp and status
             await prisma.user.update({
                 where: { id: user.id },
@@ -39,10 +75,10 @@ export class FbiService {
                     dataStatus: DataStatus.COMPLETED
                 }
             });
+            Logger.info('FbiService', `processUserData completed for user: ${user.id}`);
         } catch (error) {
             // Update user status to failed if any error occurs
-
-            console.log("Error in processUserData", error)
+            Logger.error('FbiService', 'Error in processUserData', error);
             const user = await prisma.user.findFirst({
                 where: { githubId: request.githubUsername }
             });
@@ -51,6 +87,7 @@ export class FbiService {
                     where: { id: user.id },
                     data: { dataStatus: DataStatus.FAILED }
                 });
+                Logger.info('FbiService', `User status set to FAILED for user: ${user.id}`);
             }
             throw error;
         }
@@ -58,6 +95,7 @@ export class FbiService {
 
     private async processGithubData(githubUsername: string, userId: string): Promise<void> {
         try {
+            Logger.info('FbiService', `Starting processGithubData for userId: ${userId}, githubUsername: ${githubUsername}`);
             // Initialize with empty data
             await prisma.githubData.upsert({
                 where: { userId },
@@ -78,8 +116,11 @@ export class FbiService {
             const githubHelper = new GitHubHelper(env.GITHUB_ACCESS_TOKEN);
             const githubGraphHelper = new GitHubGraphQLHelper(env.GITHUB_ACCESS_TOKEN);
 
+            Logger.info('FbiService', `Fetching GitHub user data for: ${githubUsername}`);
             const userData = await githubHelper.fetchUser(githubUsername);
+            Logger.info('FbiService', `Fetching GitHub repos for: ${githubUsername}`);
             const userRepoData = await githubHelper.fetchUserReposWithDetails(githubUsername);
+            Logger.info('FbiService', `Fetching GitHub organizations for: ${githubUsername}`);
             const organizations = await githubHelper.fetchUserOrganizations(githubUsername);
             
             // Get contributions for last 4 years
@@ -95,6 +136,7 @@ export class FbiService {
                 repoContributions: {}
             };
             
+            Logger.info('FbiService', `Fetching GitHub contributions for last 4 years for: ${githubUsername}`);
             // Loop through last 4 years
             for (let i = 0; i < 4; i++) {
                 const endDate = new Date(now);
@@ -105,6 +147,7 @@ export class FbiService {
                 const endDateISOString = endDate.toISOString().split('.')[0] + 'Z';
                 const startDateISOString = startDate.toISOString().split('.')[0] + 'Z';
                 
+                Logger.info('FbiService', `Fetching contributions for year ${i + 1}: ${startDateISOString} to ${endDateISOString}`);
                 const yearContributions = await githubGraphHelper.getUserContributions(
                     githubUsername,
                     startDateISOString,
@@ -135,6 +178,7 @@ export class FbiService {
             const orgsJson = JSON.parse(JSON.stringify(organizations));
             const contributionsJson = JSON.parse(JSON.stringify(mergedContributions));
 
+            Logger.info('FbiService', `Updating githubData in DB for userId: ${userId}`);
             await prisma.githubData.update({
                 where: { userId },
                 data: {
@@ -146,17 +190,20 @@ export class FbiService {
                     lastFetchedAt: new Date()
                 }
             });
+            Logger.info('FbiService', `processGithubData completed for userId: ${userId}`);
         } catch (error) {
             await prisma.githubData.update({
                 where: { userId },
                 data: { status: DataStatus.FAILED }
             });
+            Logger.error('FbiService', 'Error in processGithubData', error);
             throw error;
         }
     }
 
     private async extractOnchainData(request: AnalyzeUserRequest, user: User): Promise<void> {
         try {
+            Logger.info('FbiService', `Starting extractOnchainData for userId: ${user.id}`);
             // Get platform configuration
             const platformConfig = await prisma.platformConfig.findUnique({
                 where: { name: "default" }
@@ -169,6 +216,7 @@ export class FbiService {
                 .filter(([_, enabled]) => enabled)
                 .map(([chain]) => chain as Network);
 
+            Logger.info('FbiService', `Enabled chains for userId ${user.id}: ${enabledChains.join(', ')}`);
             // Initialize empty data structures
             await prisma.contractsData.upsert({
                 where: { userId: user.id },
@@ -198,15 +246,18 @@ export class FbiService {
                 }
             });
 
+            Logger.info('FbiService', `Processing onchain data for each chain for userId: ${user.id}`);
             // Process each chain in parallel
             const chainResults = await Promise.all(
                 enabledChains.map(async (chain) => {
                     try {
+                        Logger.info('FbiService', `Processing chain: ${chain} for userId: ${user.id}`);
                         const onchainDataManager = new OnchainDataManager(env.ALCHEMY_API_KEY, chain);
                         
                         // Get contracts for this chain
                         let chainContracts: any = [];
                         for (const address of request.addresses) {
+                            Logger.info('FbiService', `Getting contracts deployed by address: ${address} on chain: ${chain}`);
                             const contracts = await onchainDataManager.getContractsDeployedByAddress(address, "0x0", "latest");
                             chainContracts = [...chainContracts, ...contracts];
                         }
@@ -214,10 +265,10 @@ export class FbiService {
                         // Get history for this chain
                         let chainHistory: any = [];
                         for (const address of request.addresses) {
+                            Logger.info('FbiService', `Getting onchain history for address: ${address} on chain: ${chain}`);
                             const history = await onchainDataManager.getOnchainHistoryForAddresses([address], "0x0", "latest");
                             chainHistory = [...chainHistory, ...history];
                         }
-
 
                         // Calculate contract statistics for this chain
                         const contractStats = {
@@ -229,19 +280,22 @@ export class FbiService {
                         // Calculate transaction statistics for this chain
                         const transactionStats = {
                             mainnet: {
-                                external: chainHistory.filter((t: any) => !t.isTestnet && t.type === 'external').length,
-                                nft: chainHistory.filter((t: any) => !t.isTestnet && t.type === 'nft').length,
-                                erc20: chainHistory.filter((t: any) => !t.isTestnet && t.type === 'erc20').length,
+                                external: chainHistory.filter((t: any) => !t.isTestnet && t.category === 'external').length,
+                                internal: chainHistory.filter((t: any) => !t.isTestnet && t.category === 'internal').length,
+                                nft: chainHistory.filter((t: any) => !t.isTestnet && t.category === 'nft').length,
+                                erc20: chainHistory.filter((t: any) => !t.isTestnet && t.category === 'erc20').length,
                                 total: chainHistory.filter((t: any) => !t.isTestnet).length
                             },
                             testnet: {
-                                external: chainHistory.filter((t: any) => t.isTestnet && t.type === 'external').length,
-                                nft: chainHistory.filter((t: any) => t.isTestnet && t.type === 'nft').length,
-                                erc20: chainHistory.filter((t: any) => t.isTestnet && t.type === 'erc20').length,
+                                external: chainHistory.filter((t: any) => t.isTestnet && t.category === 'external').length,
+                                internal: chainHistory.filter((t: any) => t.isTestnet && t.category === 'internal').length,
+                                nft: chainHistory.filter((t: any) => t.isTestnet && t.category === 'nft').length,
+                                erc20: chainHistory.filter((t: any) => t.isTestnet && t.category === 'erc20').length,
                                 total: chainHistory.filter((t: any) => t.isTestnet).length
                             }
                         };
 
+                        Logger.info('FbiService', `Chain ${chain} processed for userId: ${user.id}`);
                         return {
                             chain,
                             contracts: chainContracts,
@@ -251,7 +305,7 @@ export class FbiService {
                             status: DataStatus.COMPLETED
                         };
                     } catch (error) {
-                        console.error(`Error processing chain ${chain}:`, error);
+                        Logger.error('FbiService', `Error processing chain ${chain}:`, error);
                         return {
                             chain,
                             contracts: [],
@@ -317,6 +371,7 @@ export class FbiService {
             contractStatsByChain['total'] = totalContractStats;
             transactionStatsByChain['total'] = totalTransactionStats;
 
+            Logger.info('FbiService', `Updating contractsData and onchainData in DB for userId: ${user.id}`);
             // Update database with organized data
             await prisma.contractsData.update({
                 where: { userId: user.id },
@@ -337,8 +392,9 @@ export class FbiService {
                     lastFetchedAt: new Date()
                 }
             });
+            Logger.info('FbiService', `extractOnchainData completed for userId: ${user.id}`);
         } catch (error) {
-            console.log(error)
+            Logger.error('FbiService', 'Error in extractOnchainData', error);
             // Update status to failed if any error occurs
             await prisma.contractsData.update({
                 where: { userId: user.id },
@@ -348,6 +404,51 @@ export class FbiService {
                 where: { userId: user.id },
                 data: { status: DataStatus.FAILED }
             });
+            throw error;
+        }
+    }
+
+    private async extractHackathonData(request: AnalyzeUserRequest, user: User): Promise<void> {
+        try {
+            Logger.info('FbiService', `Starting extractHackathonData for userId: ${user.id}`);
+            
+            // Get hackathon credentials for all addresses
+            Logger.info('FbiService', `Getting hackathon credentials for all addresses for userId: ${user.id}`);
+            const hackathonCredentialsPromises = request.addresses.map(address => 
+                OnchainDataManager.getHackathonCredentials(address)
+            );
+            const hackathonResults = await Promise.all(hackathonCredentialsPromises);
+            
+            // Combine hackathon results from all addresses
+            const combinedHackathonData = hackathonResults.reduce((acc, curr) => ({
+                totalWins: acc.totalWins + (curr.totalWins || 0),
+                totalHacker: acc.totalHacker + (curr.totalHacker || 0),
+                HACKER: {
+                    count: acc.HACKER.count + (curr.HACKER?.count || 0),
+                    packs: { ...acc.HACKER.packs, ...curr.HACKER?.packs }
+                },
+                WINS: {
+                    count: acc.WINS.count + (curr.WINS?.count || 0),
+                    packs: { ...acc.WINS.packs, ...curr.WINS?.packs }
+                }
+            }), {
+                totalWins: 0,
+                totalHacker: 0,
+                HACKER: { count: 0, packs: {} },
+                WINS: { count: 0, packs: {} }
+            });
+
+            // Store hackathon data in onchainData
+            await prisma.onchainData.update({
+                where: { userId: user.id },
+                data: {
+                    hackathonData: combinedHackathonData
+                }
+            });
+
+            Logger.info('FbiService', `extractHackathonData completed for userId: ${user.id}`);
+        } catch (error) {
+            Logger.error('FbiService', 'Error in extractHackathonData', error);
             throw error;
         }
     }

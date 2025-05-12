@@ -15,6 +15,7 @@ const defaultConfig = {
         transactions: 3000,
         web3Languages: 246639660,
         cryptoRepoContributions: 50,
+        hackathonWins: 10,
 
         // Web2 thresholds
         prs: 100,
@@ -34,7 +35,8 @@ const defaultConfig = {
         uniqueUsers: 5,
         transactions: 20,
         web3Languages: 20,
-        cryptoRepoContributions: 30,
+        cryptoRepoContributions: 15,
+        hackathonWins: 15,
 
         // Web2 weights
         prs: 10,

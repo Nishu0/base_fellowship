@@ -1,4 +1,5 @@
 import { PrismaClient, DataStatus } from '@prisma/client';
+import { Logger } from '@/common/utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -31,6 +32,7 @@ const DEFAULT_THRESHOLDS = {
     transactions: 100,
     web3Languages: 10000,
     cryptoRepoContributions: 50,
+    hackathonWins: 10,
 
     // Web2 thresholds
     prs: 20,
@@ -52,7 +54,8 @@ const DEFAULT_WEIGHTS = {
     uniqueUsers: 5,
     transactions: 20,
     web3Languages: 20,
-    cryptoRepoContributions: 30,
+    cryptoRepoContributions: 15,
+    hackathonWins: 15,
 
     // Web2 weights
     prs: 10,
@@ -67,6 +70,7 @@ const DEFAULT_WEIGHTS = {
 
 export class ScoreService {
     async calculateUserScore(userId: string): Promise<void> {
+        Logger.info('ScoreService', 'Starting calculateUserScore', { userId });
         try {
             // Get user data
             const user = await prisma.user.findUnique({
@@ -119,8 +123,10 @@ export class ScoreService {
                     metrics
                 }
             });
+
+            Logger.info('ScoreService', 'Successfully calculated user score', { userId });
         } catch (error) {
-            console.error("Error calculating user score:", error);
+            Logger.error('ScoreService', 'Error calculating user score', error);
             throw error;
         }
     }
@@ -133,6 +139,24 @@ export class ScoreService {
     ): Promise<number> {
         const web3Metrics = metrics.web3;
         let totalWeb3Score = 0;
+
+        // Get hackathon data from onchainData
+        const onchainData = await prisma.onchainData.findUnique({
+            where: { userId: user.id }
+        });
+
+        const hackathonData = onchainData?.hackathonData as any;
+        const totalWins = hackathonData.totalWins || 0;
+
+        // Calculate hackathon score
+        const hackathonScore = Math.min(totalWins / thresholds.hackathonWins, 1) * weights.hackathonWins;
+        web3Metrics.hackathonWins = {
+            value: totalWins,
+            threshold: thresholds.hackathonWins,
+            weight: weights.hackathonWins,
+            score: hackathonScore,
+            details: hackathonData
+        };
 
         // 1. Contracts Deployed (20 points total)
         const contractStats = user.onchainData?.contractStats as any;
@@ -194,7 +218,7 @@ export class ScoreService {
         
         const externalTxs = mainnetStats.external || 0;
         const internalTxs = mainnetStats.internal || 0;
-        const totalTxs = externalTxs + internalTxs;
+        const totalTxs = mainnetStats.total || 0;
 
         const transactionScore = Math.min(totalTxs / thresholds.transactions, 1) * weights.transactions;
         web3Metrics.transactions = {
@@ -370,6 +394,7 @@ export class ScoreService {
     }
 
     async calculateDeveloperWorth(userId: string): Promise<void> {
+        Logger.info('ScoreService', 'Starting calculateDeveloperWorth', { userId });
         try {
             // Get user data
             const user = await prisma.user.findUnique({
@@ -431,8 +456,10 @@ export class ScoreService {
                     lastCalculatedAt: new Date()
                 }
             });
+
+            Logger.info('ScoreService', 'Successfully calculated developer worth', { userId });
         } catch (error) {
-            console.error("Error calculating developer worth:", error);
+            Logger.error('ScoreService', 'Error calculating developer worth', error);
             throw error;
         }
     }
@@ -450,7 +477,16 @@ export class ScoreService {
             where: { name: "default" }
         });
 
-        const multipliers = platformConfig?.developerWorthMultipliers?.web3 || {
+        let multipliersObj: any = platformConfig?.developerWorthMultipliers;
+        if (typeof multipliersObj === 'string') {
+            try {
+                multipliersObj = JSON.parse(multipliersObj);
+            } catch (e) {
+                Logger.error('ScoreService', 'Failed to parse developerWorthMultipliers as JSON', e);
+                multipliersObj = {};
+            }
+        }
+        const multipliers = multipliersObj?.web3 || {
             experience: {
                 mainnetContract: 2000,
                 testnetContract: 500,
@@ -549,7 +585,16 @@ export class ScoreService {
             where: { name: "default" }
         });
 
-        const multipliers = platformConfig?.developerWorthMultipliers?.web2 || {
+        let multipliersObj: any = platformConfig?.developerWorthMultipliers;
+        if (typeof multipliersObj === 'string') {
+            try {
+                multipliersObj = JSON.parse(multipliersObj);
+            } catch (e) {
+                Logger.error('ScoreService', 'Failed to parse developerWorthMultipliers as JSON', e);
+                multipliersObj = {};
+            }
+        }
+        const multipliers = multipliersObj?.web2 || {
             experience: {
                 accountAge: 20,
                 pr: 100,

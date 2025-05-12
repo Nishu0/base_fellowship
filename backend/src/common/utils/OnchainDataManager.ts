@@ -92,7 +92,8 @@ export class OnchainDataManager {
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
-                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString(),
+                                    isTestnet: this.network.toString().includes("sepolia")
                                 };
                             })
                         );
@@ -122,7 +123,8 @@ export class OnchainDataManager {
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
-                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString(),
+                                    isTestnet: this.network.toString().includes("sepolia")
                                 };
                             })
                         );
@@ -156,7 +158,8 @@ export class OnchainDataManager {
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
-                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString(),
+                                    isTestnet: this.network.toString().includes("sepolia")
                                 };
                             })
                         );
@@ -185,7 +188,8 @@ export class OnchainDataManager {
                                 return {
                                     ...transfer,
                                     timestamp: block.timestamp,
-                                    date: new Date(Number(block.timestamp) * 1000).toISOString()
+                                    date: new Date(Number(block.timestamp) * 1000).toISOString(),
+                                    isTestnet: this.network.toString().includes("sepolia")
                                 };
                             })
                         );
@@ -346,7 +350,7 @@ export class OnchainDataManager {
         }
     }
 
-    static async getETHGlobalCredentials(address: string): Promise<any> {
+    static async getHackathonCredentials(address: string): Promise<any> {
         console.log("Getting ETHGlobal credentials for", address);
         
         // Run both checks in parallel
@@ -356,16 +360,17 @@ export class OnchainDataManager {
         ]);
         
         return {
-            wallet: address,
-            community: {
+            HACKER: {
                 count: communityPacksResult.count,
                 packs: communityPacksResult.results
             },
-            finalist: {
+            WINS: {
                 count: finalistPacksResult.count,
                 packs: finalistPacksResult.results
             },
-            totalPacksCount: communityPacksResult.count + finalistPacksResult.count
+            
+            totalWins: finalistPacksResult.count,
+            totalHacker: communityPacksResult.count
         };
     }
 } 
