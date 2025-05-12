@@ -76,7 +76,6 @@ export default function UserProfilePage() {
       totalPRs: number;
       totalIssues: number;
       contributionCalendar: {
-        totalContributions: number;
         weeks: Array<{
           contributionDays: Array<{
             date: string;
@@ -85,18 +84,38 @@ export default function UserProfilePage() {
         }>;
       };
     };
-    onchainHistory?: Record<string, any[]>;
-    contractsDeployed?: Record<string, any[]>;
+    onchainHistory?: Record<string, Array<{
+      date: string;
+      [key: string]: any;
+    }>>;
+    contractsDeployed?: Record<string, Array<{
+      tvl: string;
+      uniqueUsers: number;
+      [key: string]: any;
+    }>>;
     score?: {
       totalScore: number;
       metrics: {
         web2: {
           total: number;
-          [key: string]: any;
+          prs: { score: number; value: number };
+          forks: { score: number; value: number };
+          stars: { score: number; value: number };
+          issues: { score: number; value: number };
+          followers: { score: number; value: number };
+          accountAge: { score: number; value: number };
+          contributions: { score: number; value: number };
+          totalLinesOfCode: { score: number; value: number };
         };
         web3: {
           total: number;
-          [key: string]: any;
+          mainnetTVL: { score: number; value: number };
+          uniqueUsers: { score: number; value: number };
+          transactions: { score: number; value: number };
+          web3Languages: { score: number; value: number };
+          mainnetContracts: { score: number; value: number };
+          testnetContracts: { score: number; value: number };
+          cryptoRepoContributions: { score: number; value: number };
         };
       };
     };
@@ -139,7 +158,7 @@ export default function UserProfilePage() {
     const onchainScore = userData.score?.metrics?.web3?.total || 0;
     const overallScore = Math.round((githubScore + onchainScore) / 2);
     
-    const shareText = `Check out ${userData.userData.name || username}'s profile on Klyro!\n\nGitHub Score: ${githubScore}/100\nOnchain Score: ${onchainScore}/100\nOverall: ${overallScore}/100`;
+    const shareText = `Check out ${userData.userData.name || username}'s profile on Klyro!\n\nOnchain Score: ${onchainScore}/100\nOverall: ${overallScore}/100`;
     return `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(getShareUrl())}`;
   };
   
@@ -197,7 +216,7 @@ export default function UserProfilePage() {
     return {
       contributionsByDay,
       contributionMonths: Array.from(months),
-      totalContributions: calendar.totalContributions
+      totalContributions: userData?.contributionData?.totalContributions || 0
     };
   };
 
@@ -343,10 +362,6 @@ export default function UserProfilePage() {
   const calculateScores = () => {
     if (!userData) return { github: 0, onchain: 0, web2: 0, overall: 0 };
     
-    const githubScore = userData.score?.metrics?.web2?.total 
-      ? Math.round(userData.score.metrics.web2.total) 
-      : 0;
-    
     const onchainScore = userData.score?.metrics?.web3?.total 
       ? Math.round(userData.score.metrics.web3.total) 
       : 0;
@@ -357,10 +372,9 @@ export default function UserProfilePage() {
       : 70;
     
     // Calculate overall score
-    const overall = Math.round((githubScore + onchainScore + web2Score) / 3);
+    const overall = Math.round((web2Score + onchainScore) / 2);
     
     return {
-      github: githubScore,
       onchain: onchainScore,
       web2: web2Score,
       overall
@@ -653,20 +667,6 @@ export default function UserProfilePage() {
                     </div>
                   </div>
                   
-                  {/* GitHub Score */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">GitHub Score</span>
-                      <span className="font-medium">{user.scores.github}/100</span>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-purple-500 rounded-full"
-                        style={{ width: `${user.scores.github}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
                   {/* Onchain Score */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
@@ -701,7 +701,6 @@ export default function UserProfilePage() {
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                 <div className="flex justify-between items-center mb-5">
                   <h2 className="text-xl font-semibold">Chain Activity</h2>
-                  <ChevronDown className="h-5 w-5 text-zinc-500" />
                 </div>
                 
                 <div className="space-y-3">
