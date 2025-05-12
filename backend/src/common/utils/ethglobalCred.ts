@@ -1,6 +1,14 @@
-import { ethers } from "ethers";
+import { Network, Alchemy } from 'alchemy-sdk';
+
 const apiKey = process.env.ALCHEMY_API_KEY;
-const provider = new ethers.JsonRpcProvider(`https://opt-mainnet.g.alchemy.com/v2/${apiKey}`);
+
+// Initialize Alchemy SDK
+const settings = {
+    apiKey: apiKey,
+    network: Network.OPT_MAINNET,
+};
+
+const alchemy = new Alchemy(settings);
 
 const communityPacks = {
     "OG Pack": "0x37C6fe4049c95f80e18C9cDDaA8481742456520B",
@@ -9,9 +17,9 @@ const communityPacks = {
     "Pioneer Pack": "0x69B4e2BD6D5c5eeeB7E152FB9bc9b6c4364fA410",
     "Builder Pack": "0xe600A7AD9B86A2D949069A6092b7b5a1Dae50e20",
     "Hacker Pack": "0x32382a82d9faDc55f971f33DaEeE5841cfbADbE0"
-  };
+};
 
-  const finalistPacks = {
+const finalistPacks = {
     "ETHGlobal Finalist 2025": "0x75883f9158a11234E5D94DDeDc23F431ce51Aa1d",
     "ETHGlobal Taipei 2025 Finalist": "0xf1F0B74870B946a8Cb96CeD06749036B65f5018B",
     "Agentic Ethereum 2025 Finalist": "0x1Da04F739e4b9Cff65bd8D1Ecb9ADf15Cc093f08",
@@ -30,104 +38,55 @@ const communityPacks = {
     "ETHGlobal Sydney 2024 Finalist": "0x85052Af96Ce5D90469A13bc69A618dC9a2d49aD6",
     "Scaling Ethereum 2024 Finalist": "0x6f2942E1fb7737ec3d3b29BED92Ff3e73601DcD3",
     "ETHGlobal London 2024 Finalist": "0xa94b0a0ad9485946a771acb89a7927923ddd389f"
-  };
+};
 
-// Simple cache implementation
-const cache = new Map();
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour cache
+async function checkPackBalances(walletAddress: string, packs: Record<string, string>) {
+    const results: { [key: string]: boolean } = {};
+    let count = 0;
+
+    try {
+        // Get all NFTs owned by the address
+        const nfts = await alchemy.nft.getNftsForOwner(walletAddress);
+        
+        // Create a Set of contract addresses for faster lookup
+        const contractAddresses = new Set(Object.values(packs).map(addr => addr.toLowerCase()));
+        
+        // Check which NFTs are from our target contracts
+        const ownedNfts = nfts.ownedNfts.filter(nft => 
+            contractAddresses.has(nft.contract.address.toLowerCase())
+        );
+
+        // Create a map of contract address to pack name for reverse lookup
+        const contractToPackName = Object.entries(packs).reduce((acc, [name, addr]) => {
+            acc[addr.toLowerCase()] = name;
+            return acc;
+        }, {} as Record<string, string>);
+
+        // Update results based on owned NFTs
+        for (const nft of ownedNfts) {
+            const packName = contractToPackName[nft.contract.address.toLowerCase()];
+            if (packName) {
+                results[packName] = true;
+                count++;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking pack balances:', error);
+        throw error;
+    }
+
+    return { results, count };
+}
 
 export const checkCommunityPacks = async (walletAddress: string) => {
-  console.log("Checking community packs for", walletAddress);
-  
-  // Check cache first
-  const cacheKey = `community_${walletAddress.toLowerCase()}`;
-  if (cache.has(cacheKey)) {
-    const {data, timestamp} = cache.get(cacheKey);
-    if (Date.now() - timestamp < CACHE_TTL) {
-      console.log("Using cached community pack data for", walletAddress);
-      return data;
-    }
-  }
-  
-  const abi = ['function balanceOf(address owner) view returns (uint256)'];
-  const results: { [key: string]: boolean } = {};
-  
-  // Create an array of promises for all contract calls
-  const packPromises = Object.entries(communityPacks).map(async ([packName, contractAddress]) => {
-    try {
-      const contract = new ethers.Contract(contractAddress, abi, provider);
-      const balance = await contract.balanceOf(walletAddress);
-      return { packName, balance: balance > 0n };
-    } catch (error) {
-      console.error(`Error checking ${packName}:`, error);
-      return { packName, balance: false };
-    }
-  });
-  
-  // Wait for all promises to resolve
-  const packResults = await Promise.all(packPromises);
-  
-  // Process results
-  let count = 0;
-  for (const { packName, balance } of packResults) {
-    if (balance) {
-      results[packName] = true;
-      count++;
-    }
-  }
-  
-  const data = { results, count };
-  
-  // Cache the result
-  cache.set(cacheKey, { data, timestamp: Date.now() });
-  
-  console.log("Community packs checked for", walletAddress, "with results", results);
-  return data;
+    console.log("Checking community packs for", walletAddress);
+    const data = await checkPackBalances(walletAddress, communityPacks);
+    console.log("Community packs checked for", walletAddress, "with results", data.results);
+    return data;
 };
 
 export const checkFinalistPacks = async (walletAddress: string) => {
-  // Check cache first
-  const cacheKey = `finalist_${walletAddress.toLowerCase()}`;
-  if (cache.has(cacheKey)) {
-    const {data, timestamp} = cache.get(cacheKey);
-    if (Date.now() - timestamp < CACHE_TTL) {
-      return data;
-    }
-  }
-  
-  const abi = ['function balanceOf(address owner) view returns (uint256)'];
-  const results: { [key: string]: boolean } = {};
-  
-  // Create an array of promises for all contract calls
-  const packPromises = Object.entries(finalistPacks).map(async ([packName, contractAddress]) => {
-    try {
-      const contract = new ethers.Contract(contractAddress, abi, provider);
-      const balance = await contract.balanceOf(walletAddress);
-      return { packName, balance: balance > 0n };
-    } catch (error) {
-      console.error(`Error checking ${packName}:`, error);
-      return { packName, balance: false };
-    }
-  });
-  
-  // Wait for all promises to resolve
-  const packResults = await Promise.all(packPromises);
-  
-  // Process results
-  let count = 0;
-  for (const { packName, balance } of packResults) {
-    if (balance) {
-      results[packName] = true;
-      count++;
-    }
-  }
-  
-  const data = { results, count };
-  
-  // Cache the result
-  cache.set(cacheKey, { data, timestamp: Date.now() });
-  
-  return data;
+    return checkPackBalances(walletAddress, finalistPacks);
 };
 
 
