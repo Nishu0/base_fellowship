@@ -66,8 +66,32 @@ export class FbiService {
             if (worthNeedsProcessing) scorePromises.push(scoreService.calculateDeveloperWorth(user.id));
             await Promise.all(scorePromises);
 
-            Logger.info('FbiService', `Scores calculated for user: ${user.id}. Updating user status to COMPLETED.`);
-            // Update user's last fetched timestamp and status
+            Logger.info('FbiService', `Scores calculated for user: ${user.id}. Checking all service statuses.`);
+            
+            // Fetch latest status of all services
+            const [latestGithubData, latestContractsData, latestOnchainData, latestUserScore, latestDeveloperWorth] = await Promise.all([
+                prisma.githubData.findUnique({ where: { userId: user.id } }),
+                prisma.contractsData.findUnique({ where: { userId: user.id } }),
+                prisma.onchainData.findUnique({ where: { userId: user.id } }),
+                prisma.userScore.findUnique({ where: { userId: user.id } }),
+                prisma.developerWorth.findUnique({ where: { userId: user.id } })
+            ]);
+
+            // Check if any service failed or is still processing
+            const failedServices = [];
+            if (latestGithubData?.status !== DataStatus.COMPLETED) failedServices.push('GitHub Data');
+            if (latestContractsData?.status !== DataStatus.COMPLETED) failedServices.push('Contracts Data');
+            if (latestOnchainData?.status !== DataStatus.COMPLETED) failedServices.push('Onchain Data');
+            if (!latestUserScore) failedServices.push('User Score');
+            if (!latestDeveloperWorth) failedServices.push('Developer Worth');
+
+            if (failedServices.length > 0) {
+                const errorMessage = `The following services failed to complete: ${failedServices.join(', ')}`;
+                Logger.error('FbiService', errorMessage);
+                throw new Error(errorMessage);
+            }
+
+            // Update user's last fetched timestamp and status only if all services completed successfully
             await prisma.user.update({
                 where: { id: user.id },
                 data: {
