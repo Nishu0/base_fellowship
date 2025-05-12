@@ -41,6 +41,45 @@ import {
 import { useParams } from "next/navigation";
 import { api } from "@/lib/axiosClient";
 
+// Format numbers to display with K for thousands, M for millions, etc.
+const formatNumber = (value: number): string => {
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  } else {
+    return value.toString();
+  }
+};
+
+// Add interface for ChainData to ensure consistent typing
+interface ChainData {
+  name: string;
+  transactions: number;
+  contracts: number;
+  score: number;
+  firstActivity: string | null;
+  tvl: string;
+  uniqueUsers: number;
+}
+
+// Add Score component
+const Score = ({ value }: { value: number }) => {
+  const getColor = () => {
+    if (value >= 80) return "text-green-500";
+    if (value >= 60) return "text-yellow-500";
+    if (value >= 40) return "text-orange-500";
+    return "text-red-500";
+  };
+
+  return (
+    <div className="flex items-center">
+      <div className={`text-lg font-bold ${getColor()}`}>{value}</div>
+      <div className="text-xs text-zinc-400 ml-1">/100</div>
+    </div>
+  );
+};
+
 export default function UserProfilePage() {
   const { username } = useParams();
   // Define TypeScript interface for API response
@@ -119,6 +158,13 @@ export default function UserProfilePage() {
         };
       };
     };
+    developerWorth?: {
+      totalWorth: number;
+      breakdown: {
+        web2Worth: number;
+        web3Worth: number;
+      };
+    };
   }
 
   const [userData, setUserData] = useState<GitHubUserData | null>(null);
@@ -127,6 +173,8 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isCopied, setIsCopied] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [selectedGithubYear, setSelectedGithubYear] = useState<number | null>(null);
+  const [selectedOnchainYear, setSelectedOnchainYear] = useState<number | null>(null);
   
   // Get current URL for sharing
   const getShareUrl = () => {
@@ -189,34 +237,77 @@ export default function UserProfilePage() {
   }, [username]);
 
   // Transform GitHub activity data for the heatmap
-  const getGithubActivityData = () => {
+  const getGithubActivityData = (selectedYear: number | null = null) => {
     if (!userData?.contributionData?.contributionCalendar) {
       return { 
         contributionsByDay: [],
-        contributionMonths: [],
-        totalContributions: 0
+        contributionMonths: [] as string[],
+        totalContributions: 0,
+        availableYears: []
       };
     }
 
     const calendar = userData.contributionData.contributionCalendar;
     
-    // Flatten contribution days from all weeks
-    const contributionsByDay = calendar.weeks.flatMap(week => 
-      week.contributionDays.map(day => day.contributionCount)
+    // Extract all dates from the contribution data
+    const allDates = calendar.weeks.flatMap(week => 
+      week.contributionDays.map(day => new Date(day.date))
     );
-
-    // Extract month names from dates
-    const months = new Set();
-    calendar.weeks.flatMap(week => week.contributionDays).forEach(day => {
-      const date = new Date(day.date);
-      const monthName = date.toLocaleString('default', { month: 'short' });
+    
+    // Get all years with activity
+    const years = [...new Set(allDates.map(date => date.getFullYear()))].sort();
+    
+    // If no year is selected, use the most recent
+    const yearToUse = selectedYear || (years.length > 0 ? years[years.length - 1] : new Date().getFullYear());
+    
+    // Filter contribution days for the selected year
+    const yearContributions = calendar.weeks.flatMap(week => 
+      week.contributionDays.filter(day => {
+        const date = new Date(day.date);
+        return date.getFullYear() === yearToUse;
+      })
+    );
+    
+    if (yearContributions.length === 0) {
+      return {
+        contributionsByDay: [],
+        contributionMonths: [] as string[],
+        totalContributions: 0,
+        availableYears: years
+      };
+    }
+    
+    // Create start and end dates for the full year
+    const startDate = new Date(yearToUse, 0, 1);
+    const endDate = new Date(yearToUse, 11, 31);
+    
+    // Generate daily counts (including zeros for days with no activity)
+    const dailyCounts = [];
+    const months = new Set<string>();
+    
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // Find contribution for this date
+      const contribution = yearContributions.find(day => day.date.split('T')[0] === dateStr);
+      const count = contribution ? contribution.contributionCount : 0;
+      
+      dailyCounts.push(count);
+      
+      // Track month names
+      const monthName = currentDate.toLocaleString('default', { month: 'short' });
       months.add(monthName);
-    });
-
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
     return {
-      contributionsByDay,
+      contributionsByDay: dailyCounts,
       contributionMonths: Array.from(months),
-      totalContributions: userData?.contributionData?.totalContributions || 0
+      totalContributions: yearContributions.reduce((sum, day) => sum + day.contributionCount, 0),
+      availableYears: years
     };
   };
 
@@ -261,20 +352,27 @@ export default function UserProfilePage() {
       }));
   };
 
-  // Process onchain data
+  // Update processOnchainData to explicitly return ChainData[]
   const processOnchainData = () => {
     if (!userData?.onchainHistory || Object.keys(userData.onchainHistory).length === 0) {
       return {
         totalTransactions: 0,
-        chains: []
+        chains: [] as ChainData[],
+        chainCount: 0,
+        topChain: '',
+        uniqueUsers: 0
       };
     }
 
-    const transactions = [];
-    const chains: { name: string, transactions: number, contracts: number, score: number, firstActivity: string | null }[] = [];
+    const transactions: any[] = [];
+    const chainGroups: Record<string, ChainData> = {};
+    
+    // Get all chain names
+    const chainNames = Object.keys(userData.onchainHistory || {});
     
     // Process transactions from each chain
-    Object.entries(userData.onchainHistory).forEach(([chainName, txs]) => {
+    chainNames.forEach(chainName => {
+      const txs = userData.onchainHistory?.[chainName] || [];
       if (!Array.isArray(txs) || txs.length === 0) return;
       
       // Add transactions
@@ -288,56 +386,129 @@ export default function UserProfilePage() {
       const dates = txs.map(tx => new Date(tx.date)).sort((a, b) => a.getTime() - b.getTime());
       const firstActivity = dates.length > 0 ? dates[0].toISOString() : null;
       
-      chains.push({
-        name: chainName.replace('-', ' ').replace(/^\w/, c => c.toUpperCase()),
-        transactions: txCount,
-        contracts: contractCount,
-        score: Math.min(Math.round(txCount * 2), 100), // Simple scoring
-        firstActivity
-      });
+      // Calculate TVL (using transaction values as an approximation if contract data not available)
+      let tvl = 0;
+      if (userData.contractsDeployed?.[chainName]) {
+        tvl = userData.contractsDeployed[chainName].reduce((sum, contract) => sum + (parseFloat(contract.tvl || "0")), 0);
+      }
+      
+      // Count unique users (using a rough approximation if not available from contracts)
+      let uniqueUsers = 0;
+      if (userData.contractsDeployed?.[chainName]) {
+        uniqueUsers = userData.contractsDeployed[chainName].reduce((sum, contract) => sum + (contract.uniqueUsers || 0), 0);
+      } else {
+        // If no contract data, use unique transaction addresses as a proxy
+        const uniqueAddresses = new Set();
+        txs.forEach(tx => {
+          if (tx.from) uniqueAddresses.add(tx.from);
+          if (tx.to) uniqueAddresses.add(tx.to);
+        });
+        uniqueUsers = uniqueAddresses.size;
+      }
+      
+      // Determine network name (Eth or Base)
+      const networkName = chainName.startsWith('eth') ? 'Ethereum' : 'Base';
+      
+      // If network already exists, update values
+      if (chainGroups[networkName]) {
+        chainGroups[networkName].transactions += txCount;
+        chainGroups[networkName].contracts += contractCount;
+        chainGroups[networkName].uniqueUsers += uniqueUsers;
+        
+        // Update first activity if this one is earlier
+        if (firstActivity && (!chainGroups[networkName].firstActivity || 
+            new Date(firstActivity) < new Date(chainGroups[networkName].firstActivity!))) {
+          chainGroups[networkName].firstActivity = firstActivity;
+        }
+        
+        // Sum up TVL
+        chainGroups[networkName].tvl = (parseFloat(chainGroups[networkName].tvl) + tvl).toFixed(2);
+        
+        // Recalculate score
+        chainGroups[networkName].score = Math.min(
+          Math.round(chainGroups[networkName].transactions * 2), 
+          100
+        );
+      } else {
+        // Create new network entry
+        chainGroups[networkName] = {
+          name: networkName,
+          transactions: txCount,
+          contracts: contractCount,
+          score: Math.min(Math.round(txCount * 2), 100),
+          firstActivity,
+          tvl: tvl.toFixed(2),
+          uniqueUsers
+        };
+      }
     });
+    
+    // Convert chain groups to array
+    const chains = Object.values(chainGroups) as ChainData[];
+    
+    // Calculate total unique users
+    const totalUniqueUsers = chains.reduce((sum, chain) => sum + chain.uniqueUsers, 0);
+    
+    // Find top chain by transaction count
+    const topChain = chains.length > 0 
+      ? chains.reduce((max, chain) => chain.transactions > max.transactions ? chain : max, chains[0]).name
+      : '';
     
     return {
       totalTransactions: transactions.length,
-      chains
+      chains,
+      chainCount: chains.length,
+      topChain,
+      uniqueUsers: totalUniqueUsers
     };
   };
 
-  // Process onchain data for heatmap
-  const getOnchainActivityData = () => {
+  // Process onchain data for heatmap with year selection
+  const getOnchainActivityData = (selectedYear: number | null = null) => {
     if (!userData?.onchainHistory || Object.keys(userData.onchainHistory).length === 0) {
       return {
         transactionsByDay: [],
-        activityMonths: [],
-        totalTransactions: 0
+        activityMonths: [] as string[],
+        totalTransactions: 0,
+        availableYears: []
       };
     }
 
     // Collect all transactions from all chains
     const allTransactions = Object.values(userData.onchainHistory).flat();
     
-    // Get earliest and latest transaction dates
-    const dates = allTransactions.map(tx => new Date(tx.date));
-    const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
-    const latestDate = new Date(Math.max(...dates.map(d => d.getTime())));
+    // Get all years with activity
+    const years = [...new Set(allTransactions.map(tx => new Date(tx.date).getFullYear()))].sort();
     
-    // Create a date range for the full period (similar to GitHub's full year view)
-    const startDate = new Date(earliestDate);
-    startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from beginning of week
+    // If no year is selected, use the most recent
+    const yearToUse = selectedYear || (years.length > 0 ? years[years.length - 1] : new Date().getFullYear());
     
-    const endDate = new Date(latestDate);
-    endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // End at end of week
+    // Filter transactions for the selected year
+    const yearTransactions = allTransactions.filter(tx => new Date(tx.date).getFullYear() === yearToUse);
+    
+    if (yearTransactions.length === 0) {
+      return {
+        transactionsByDay: [],
+        activityMonths: [] as string[],
+        totalTransactions: 0,
+        availableYears: years
+      };
+    }
+    
+    // Create start and end dates for the full year
+    const startDate = new Date(yearToUse, 0, 1);
+    const endDate = new Date(yearToUse, 11, 31);
     
     // Generate daily counts (including zeros for days with no activity)
     const dailyCounts = [];
-    const months = new Set();
+    const months = new Set<string>();
     
     let currentDate = new Date(startDate);
     while (currentDate <= endDate) {
       const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
       
       // Count transactions on this date
-      const count = allTransactions.filter(tx => 
+      const count = yearTransactions.filter(tx => 
         tx.date.split('T')[0] === dateStr
       ).length;
       
@@ -353,8 +524,9 @@ export default function UserProfilePage() {
 
     return {
       transactionsByDay: dailyCounts,
-      activityMonths: Array.from(months) as string[],
-      totalTransactions: allTransactions.length
+      activityMonths: Array.from(months),
+      totalTransactions: yearTransactions.length,
+      availableYears: years
     };
   };
 
@@ -389,8 +561,8 @@ export default function UserProfilePage() {
   };
 
   // Group chains by network
-  const groupChainsByNetwork = (chains: { name: string, transactions: number, contracts: number, score: number, firstActivity: string | null }[]) => {
-    const networks: Record<string, { name: string, networks: typeof chains, totalScore: number }> = {};
+  const groupChainsByNetwork = (chains: ChainData[]) => {
+    const networks: Record<string, { name: string, networks: ChainData[], totalScore: number }> = {};
 
     chains.forEach(chain => {
       const network = chain.name.split(' ')[0];
@@ -444,8 +616,8 @@ export default function UserProfilePage() {
   }
 
   // Get transformed data
-  const githubActivity = getGithubActivityData();
-  const onchainActivity = getOnchainActivityData();
+  const githubActivity = getGithubActivityData(selectedGithubYear);
+  const onchainActivity = getOnchainActivityData(selectedOnchainYear);
   const topRepos = getTopRepos();
   const topLanguages = getTopLanguages();
   const scores = calculateScores();
@@ -472,10 +644,15 @@ export default function UserProfilePage() {
     githubUrl: userData.userData.html_url,
     skills: topLanguages.map(lang => lang.name),
     scores,
-    chains: onchainData.chains,
+    worth: {
+      total: userData.developerWorth?.totalWorth || 0,
+      web2: userData.developerWorth?.breakdown?.web2Worth || 0,
+      web3: userData.developerWorth?.breakdown?.web3Worth || 0
+    },
+    chains: onchainData.chains as ChainData[],
     githubActivity: {
       contributionsByDay: githubActivity.contributionsByDay,
-      contributionMonths: githubActivity.contributionMonths,
+      contributionMonths: githubActivity.contributionMonths as string[],
       totalContributions: githubActivity.totalContributions,
       topRepos,
       followers: userData.userData.followers,
@@ -488,9 +665,12 @@ export default function UserProfilePage() {
     },
     onchainActivity: {
       totalTransactions: onchainData.totalTransactions,
-      chains: onchainData.chains,
+      chains: onchainData.chains as ChainData[],
+      chainCount: onchainData.chainCount,
+      topChain: onchainData.topChain,
+      uniqueUsers: onchainData.uniqueUsers,
       transactionsByDay: onchainActivity.transactionsByDay,
-      activityMonths: onchainActivity.activityMonths
+      activityMonths: onchainActivity.activityMonths as string[]
     }
   };
 
@@ -518,15 +698,7 @@ export default function UserProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold flex items-center">
                   {user.name}
-                  {user.verified && (
-                    <svg className="w-6 h-6 ml-2 text-blue-500" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
-                    </svg>
-                  )}
                 </h1>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-zinc-800 text-zinc-200">@{user.username}</Badge>
-                </div>
               </div>
               
               <p className="text-zinc-300 mb-3">{user.bio}</p>
@@ -648,6 +820,35 @@ export default function UserProfilePage() {
           <div className="flex flex-col md:flex-row items-start gap-6">
             {/* Left Column - Score Overview */}
             <div className="w-full md:w-80 space-y-5">
+             <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
+                <h2 className="text-xl font-semibold mb-5">Worth Overview</h2>
+                
+                <div className="space-y-5">
+                  {/* Overall Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Overall Worth</span>
+                      <span className="font-medium">${formatNumber(user.worth.total)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Onchain Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Web2 Worth</span>
+                      <span className="font-medium">${formatNumber(user.worth.web2)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Web2 Score */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Web3 Worth</span>
+                      <span className="font-medium">${formatNumber(user.worth.web3)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               {/* Score Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                 <h2 className="text-xl font-semibold mb-5">Score Overview</h2>
@@ -704,44 +905,39 @@ export default function UserProfilePage() {
                 </div>
                 
                 <div className="space-y-3">
-                  {groupChainsByNetwork(user.chains).map(network => (
-                    <div key={network.name} className="bg-zinc-900/70 rounded-xl p-3">
+                  {user.chains.map((chain) => (
+                    <div key={chain.name} className="bg-zinc-900/70 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-medium">
-                            {getNetworkIcon(network.name) ? (
-                              <Image
-                                src={getNetworkIcon(network.name) as string}
-                                alt={network.name}
-                                width={20}
-                                height={20}
-                                className="h-4 w-4 object-contain"
-                              />
-                            ) : (
-                              network.name.charAt(0)
-                            )}
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center mr-2">
+                            <Layers className="h-4 w-4 text-indigo-400" />
                           </div>
-                          <span className="font-medium">{network.name}</span>
+                          <div>
+                            <div className="text-sm font-semibold">{chain.name}</div>
+                            <div className="text-xs text-zinc-400">{chain.transactions} transactions</div>
+                          </div>
                         </div>
-                        <Badge className="text-xs px-2 py-0 bg-indigo-900/70 text-indigo-300 border-indigo-700">
-                          {Math.round(network.totalScore / network.networks.length)}/100
-                        </Badge>
+                        <div className="flex items-center">
+                          <Score value={chain.score} />
+                        </div>
                       </div>
-                      
-                      <div className="text-xs text-zinc-400 ml-9 mb-2">
-                        {network.networks.map(chain => (
-                          <div key={chain.name} className="flex justify-between">
-                            <span>{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
-                            <span>{chain.transactions} tx</span>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="h-1.5 w-full bg-zinc-800/60 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${Math.round(network.totalScore / network.networks.length)}%` }}
-                        ></div>
+                      <div className="grid grid-cols-4 gap-2 mt-3">
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
+                          <div className="text-xs text-zinc-400">Transactions</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-400">{chain.contracts}</div>
+                          <div className="text-xs text-zinc-400">Contracts</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-400">${chain.tvl}</div>
+                          <div className="text-xs text-zinc-400">TVL</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-indigo-400">{chain.uniqueUsers}</div>
+                          <div className="text-xs text-zinc-400">Users</div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -794,7 +990,7 @@ export default function UserProfilePage() {
                         <h2 className="text-lg font-bold">GitHub Activity</h2>
                       </div>
                       <Badge className="bg-blue-900/70 text-blue-300 border-blue-700">
-                        Score: {user.scores.github}/100
+                        Score: {user.scores.web2}/100
                       </Badge>
                     </div>
                     
@@ -827,11 +1023,31 @@ export default function UserProfilePage() {
                     
                     {/* GitHub heatmap */}
                     <div className="w-full pt-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-sm font-medium">GitHub Contributions</h3>
+                        {githubActivity.availableYears.length > 0 && (
+                          <div className="flex space-x-2">
+                            {githubActivity.availableYears.map(year => (
+                              <button
+                                key={year}
+                                onClick={() => setSelectedGithubYear(year)}
+                                className={`px-2 py-1 text-xs rounded-md ${
+                                  selectedGithubYear === year 
+                                    ? 'bg-indigo-600 text-white' 
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                {year}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <ActivityHeatmap
                         data={user.githubActivity.contributionsByDay}
-                        months={user.githubActivity.contributionMonths as string[]}
+                        months={user.githubActivity.contributionMonths}
                         colorScheme="github"
-                        title="GitHub Contributions"
+                        title=""
                         totalCount={user.githubActivity.totalContributions}
                       />
                     </div>
@@ -848,74 +1064,69 @@ export default function UserProfilePage() {
                         Score: {user.scores.onchain}/100
                       </Badge>
                     </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.onchainActivity.chainCount}</div>
+                        <div className="text-xs text-zinc-400">Chains</div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.onchainActivity.totalTransactions}</div>
+                        <div className="text-xs text-zinc-400">Transactions</div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">
+                          {user.chains.reduce((sum, chain) => sum + chain.contracts, 0)}
+                        </div>
+                        <div className="text-xs text-zinc-400">Contracts</div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">
+                          ${user.chains.reduce((sum, chain) => sum + parseFloat(chain.tvl || "0"), 0).toFixed(2)}
+                        </div>
+                        <div className="text-xs text-zinc-400">Total TVL</div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.onchainActivity.uniqueUsers}</div>
+                        <div className="text-xs text-zinc-400">Unique Users</div>
+                      </div>
+                      <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-white">{user.onchainActivity.topChain}</div>
+                        <div className="text-xs text-zinc-400">Top Chain</div>
+                      </div>
+                    </div>
                     
                     {user.onchainActivity.transactionsByDay.length > 0 && (
                       <div className="w-full mb-5">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-sm font-medium">On-chain Transactions</h3>
+                          {onchainActivity.availableYears.length > 0 && (
+                            <div className="flex space-x-2">
+                              {onchainActivity.availableYears.map(year => (
+                                <button
+                                  key={year}
+                                  onClick={() => setSelectedOnchainYear(year)}
+                                  className={`px-2 py-1 text-xs rounded-md ${
+                                    selectedOnchainYear === year 
+                                      ? 'bg-indigo-600 text-white' 
+                                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                  }`}
+                                >
+                                  {year}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <ActivityHeatmap
                           data={user.onchainActivity.transactionsByDay}
                           months={user.onchainActivity.activityMonths}
                           colorScheme="onchain"
-                          title="On-chain Transactions"
+                          title=""
                           totalCount={user.onchainActivity.totalTransactions}
                         />
                       </div>
                     )}
-                    
-                    <div className="space-y-6">
-                      {groupChainsByNetwork(user.chains).map((networkGroup) => (
-                        <div key={networkGroup.name} className="bg-zinc-900/70 rounded-xl overflow-hidden">
-                          <div className="p-4 border-b border-zinc-800">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-md font-medium mr-3">
-                                  {getNetworkIcon(networkGroup.name) ? (
-                                    <Image
-                                      src={getNetworkIcon(networkGroup.name) as string}
-                                      alt={networkGroup.name}
-                                      width={24}
-                                      height={24}
-                                      className="h-5 w-5 object-contain"
-                                    />
-                                  ) : (
-                                    networkGroup.name.charAt(0)
-                                  )}
-                                </div>
-                                <span className="text-lg font-medium">{networkGroup.name}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {networkGroup.networks.map(chain => (
-                              <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-3">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center">
-                                    <span className="font-medium text-indigo-200">{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-3 gap-2 text-center mb-2">
-                                  <div>
-                                    <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
-                                    <div className="text-xs text-zinc-400">Transactions</div>
-                                  </div>
-                                  <div>
-                                    <div className="text-lg font-semibold text-indigo-400">{chain.contracts || 0}</div>
-                                    <div className="text-xs text-zinc-400">Contracts</div>
-                                  </div>
-                                  <div>
-                                    <div className="text-lg font-semibold text-indigo-400">
-                                      {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {month: 'short', year: 'numeric'}) : 'N/A'}
-                                    </div>
-                                    <div className="text-xs text-zinc-400">First Active</div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </>
               )}
@@ -925,11 +1136,31 @@ export default function UserProfilePage() {
                   <h2 className="text-lg font-semibold mb-4">GitHub Activity</h2>
                   
                   <div className="w-full">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-medium">Contributions</h3>
+                      {githubActivity.availableYears.length > 0 && (
+                        <div className="flex space-x-2">
+                          {githubActivity.availableYears.map(year => (
+                            <button
+                              key={year}
+                              onClick={() => setSelectedGithubYear(year)}
+                              className={`px-2 py-1 text-xs rounded-md ${
+                                selectedGithubYear === year 
+                                  ? 'bg-indigo-600 text-white' 
+                                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                              }`}
+                            >
+                              {year}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <ActivityHeatmap
                       data={user.githubActivity.contributionsByDay}
-                      months={user.githubActivity.contributionMonths as string[]}
+                      months={user.githubActivity.contributionMonths}
                       colorScheme="github"
-                      title="GitHub Contributions"
+                      title=""
                       totalCount={user.githubActivity.totalContributions}
                     />
                   </div>
@@ -1030,11 +1261,31 @@ export default function UserProfilePage() {
                     <>
                       {user.onchainActivity.transactionsByDay.length > 0 && (
                         <div className="w-full mb-6">
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-medium">On-chain Transactions</h3>
+                            {onchainActivity.availableYears.length > 0 && (
+                              <div className="flex space-x-2">
+                                {onchainActivity.availableYears.map(year => (
+                                  <button
+                                    key={year}
+                                    onClick={() => setSelectedOnchainYear(year)}
+                                    className={`px-2 py-1 text-xs rounded-md ${
+                                      selectedOnchainYear === year 
+                                        ? 'bg-indigo-600 text-white' 
+                                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                    }`}
+                                  >
+                                    {year}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           <ActivityHeatmap
                             data={user.onchainActivity.transactionsByDay}
                             months={user.onchainActivity.activityMonths}
                             colorScheme="onchain"
-                            title="On-chain Transactions"
+                            title=""
                             totalCount={user.onchainActivity.totalTransactions}
                           />
                         </div>
@@ -1062,7 +1313,7 @@ export default function UserProfilePage() {
                                   <span className="text-lg font-medium">{networkGroup.name}</span>
                                 </div>
                                 <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700 px-2">
-                                  Score: {networkGroup.totalScore}/100
+                                  Score: {Math.round(networkGroup.totalScore / networkGroup.networks.length)}/100
                                 </Badge>
                               </div>
                             </div>
@@ -1074,12 +1325,12 @@ export default function UserProfilePage() {
                                     <div className="flex items-center">
                                       <span className="font-medium text-indigo-200">{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
                                     </div>
-                                    {/* <Badge className="text-xs bg-indigo-900/70 text-indigo-300">
+                                    <Badge className="text-xs bg-indigo-900/70 text-indigo-300">
                                       {chain.score}/100
-                                    </Badge> */}
+                                    </Badge>
                                   </div>
                                   
-                                  <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                                  <div className="grid grid-cols-4 gap-2 text-center mb-2">
                                     <div>
                                       <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
                                       <div className="text-xs text-zinc-400">Transactions</div>
@@ -1089,10 +1340,12 @@ export default function UserProfilePage() {
                                       <div className="text-xs text-zinc-400">Contracts</div>
                                     </div>
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">
-                                        {chain.firstActivity ? new Date(chain.firstActivity).toLocaleDateString('en-US', {month: 'short', year: 'numeric'}) : 'N/A'}
-                                      </div>
-                                      <div className="text-xs text-zinc-400">First Active</div>
+                                      <div className="text-lg font-semibold text-indigo-400">${chain.tvl || "0.00"}</div>
+                                      <div className="text-xs text-zinc-400">TVL</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.uniqueUsers || 0}</div>
+                                      <div className="text-xs text-zinc-400">Users</div>
                                     </div>
                                   </div>
                                 </div>
