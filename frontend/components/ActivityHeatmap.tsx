@@ -8,6 +8,7 @@ interface ActivityHeatmapProps {
   colorScheme?: "github" | "onchain";
   title: string;
   totalCount: number;
+  contributions?: "github" | "onchain";
 }
 
 export default function ActivityHeatmap({
@@ -15,7 +16,8 @@ export default function ActivityHeatmap({
   months,
   colorScheme = "github",
   title,
-  totalCount
+  totalCount,
+  contributions
 }: ActivityHeatmapProps) {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
@@ -72,7 +74,7 @@ export default function ActivityHeatmap({
     <div className="relative space-y-2">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-medium text-zinc-300">{title}</h3>
-        <span className="text-sm text-zinc-400">{totalCount} total contributions</span>
+        <span className="text-sm text-zinc-400">{contributions === "github" ? `${totalCount} total contributions` : `${totalCount} total transactions`}</span>
       </div>
       
       <div className="relative overflow-hidden">

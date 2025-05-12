@@ -61,6 +61,18 @@ interface ChainData {
   firstActivity: string | null;
   tvl: string;
   uniqueUsers: number;
+  mainnet: {
+    transactions: number;
+    contracts: number;
+    tvl: string;
+    uniqueUsers: number;
+  };
+  testnet: {
+    transactions: number;
+    contracts: number;
+    tvl: string;
+    uniqueUsers: number;
+  };
 }
 
 // Add Score component
@@ -351,7 +363,7 @@ export default function UserProfilePage() {
         percentage: 0 // Will calculate below
       }));
   };
-
+console.log("userData",userData);
   // Update processOnchainData to explicitly return ChainData[]
   const processOnchainData = () => {
     if (!userData?.onchainHistory || Object.keys(userData.onchainHistory).length === 0) {
@@ -363,9 +375,26 @@ export default function UserProfilePage() {
         uniqueUsers: 0
       };
     }
+    console.log("processOnchainData",processOnchainData);
 
     const transactions: any[] = [];
-    const chainGroups: Record<string, ChainData> = {};
+    const chainGroups: Record<string, {
+      name: string;
+      mainnet: {
+        transactions: number;
+        contracts: number;
+        tvl: string;
+        uniqueUsers: number;
+      };
+      testnet: {
+        transactions: number;
+        contracts: number;
+        tvl: string;
+        uniqueUsers: number;
+      };
+      score: number;
+      firstActivity: string | null;
+    }> = {};
     
     // Get all chain names
     const chainNames = Object.keys(userData.onchainHistory || {});
@@ -378,24 +407,29 @@ export default function UserProfilePage() {
       // Add transactions
       transactions.push(...txs);
       
+      // Extract chain info from name
+      const isMainnet = chainName.includes('mainnet');
+      const networkName = chainName.startsWith('eth') ? 'Ethereum' : 'Base';
+      
       // Create chain data
       const txCount = txs.length;
-      const contractCount = userData.contractsDeployed?.[chainName]?.length || 0;
+      const contractsData = userData.contractsDeployed?.[chainName] || [];
+      const contractCount = contractsData.length;
       
       // Get first activity date
       const dates = txs.map(tx => new Date(tx.date)).sort((a, b) => a.getTime() - b.getTime());
       const firstActivity = dates.length > 0 ? dates[0].toISOString() : null;
       
-      // Calculate TVL (using transaction values as an approximation if contract data not available)
+      // Calculate TVL
       let tvl = 0;
-      if (userData.contractsDeployed?.[chainName]) {
-        tvl = userData.contractsDeployed[chainName].reduce((sum, contract) => sum + (parseFloat(contract.tvl || "0")), 0);
+      if (contractsData.length > 0) {
+        tvl = contractsData.reduce((sum, contract) => sum + (parseFloat(contract.tvl || "0")), 0);
       }
       
-      // Count unique users (using a rough approximation if not available from contracts)
+      // Count unique users
       let uniqueUsers = 0;
-      if (userData.contractsDeployed?.[chainName]) {
-        uniqueUsers = userData.contractsDeployed[chainName].reduce((sum, contract) => sum + (contract.uniqueUsers || 0), 0);
+      if (contractsData.length > 0) {
+        uniqueUsers = contractsData.reduce((sum, contract) => sum + (contract.uniqueUsers || 0), 0);
       } else {
         // If no contract data, use unique transaction addresses as a proxy
         const uniqueAddresses = new Set();
@@ -406,14 +440,19 @@ export default function UserProfilePage() {
         uniqueUsers = uniqueAddresses.size;
       }
       
-      // Determine network name (Eth or Base)
-      const networkName = chainName.startsWith('eth') ? 'Ethereum' : 'Base';
-      
       // If network already exists, update values
       if (chainGroups[networkName]) {
-        chainGroups[networkName].transactions += txCount;
-        chainGroups[networkName].contracts += contractCount;
-        chainGroups[networkName].uniqueUsers += uniqueUsers;
+        if (isMainnet) {
+          chainGroups[networkName].mainnet.transactions += txCount;
+          chainGroups[networkName].mainnet.contracts += contractCount;
+          chainGroups[networkName].mainnet.uniqueUsers += uniqueUsers;
+          chainGroups[networkName].mainnet.tvl = (parseFloat(chainGroups[networkName].mainnet.tvl) + tvl).toFixed(2);
+        } else {
+          chainGroups[networkName].testnet.transactions += txCount;
+          chainGroups[networkName].testnet.contracts += contractCount;
+          chainGroups[networkName].testnet.uniqueUsers += uniqueUsers;
+          chainGroups[networkName].testnet.tvl = (parseFloat(chainGroups[networkName].testnet.tvl) + tvl).toFixed(2);
+        }
         
         // Update first activity if this one is earlier
         if (firstActivity && (!chainGroups[networkName].firstActivity || 
@@ -421,30 +460,43 @@ export default function UserProfilePage() {
           chainGroups[networkName].firstActivity = firstActivity;
         }
         
-        // Sum up TVL
-        chainGroups[networkName].tvl = (parseFloat(chainGroups[networkName].tvl) + tvl).toFixed(2);
-        
-        // Recalculate score
-        chainGroups[networkName].score = Math.min(
-          Math.round(chainGroups[networkName].transactions * 2), 
-          100
-        );
+        // Recalculate score based on total transactions
+        const totalTransactions = chainGroups[networkName].mainnet.transactions + chainGroups[networkName].testnet.transactions;
+        chainGroups[networkName].score = Math.min(Math.round(totalTransactions * 2), 100);
       } else {
-        // Create new network entry
+        // Create new network entry with separate mainnet and testnet data
         chainGroups[networkName] = {
           name: networkName,
-          transactions: txCount,
-          contracts: contractCount,
+          mainnet: {
+            transactions: isMainnet ? txCount : 0,
+            contracts: isMainnet ? contractCount : 0,
+            tvl: isMainnet ? tvl.toFixed(2) : "0.00",
+            uniqueUsers: isMainnet ? uniqueUsers : 0
+          },
+          testnet: {
+            transactions: isMainnet ? 0 : txCount,
+            contracts: isMainnet ? 0 : contractCount,
+            tvl: isMainnet ? "0.00" : tvl.toFixed(2),
+            uniqueUsers: isMainnet ? 0 : uniqueUsers
+          },
           score: Math.min(Math.round(txCount * 2), 100),
-          firstActivity,
-          tvl: tvl.toFixed(2),
-          uniqueUsers
+          firstActivity
         };
       }
     });
     
-    // Convert chain groups to array
-    const chains = Object.values(chainGroups) as ChainData[];
+    // Convert to ChainData format for compatibility
+    const chains = Object.entries(chainGroups).map(([_, data]) => ({
+      name: data.name,
+      transactions: data.mainnet.transactions + data.testnet.transactions,
+      contracts: data.mainnet.contracts + data.testnet.contracts,
+      score: data.score,
+      firstActivity: data.firstActivity,
+      tvl: (parseFloat(data.mainnet.tvl) + parseFloat(data.testnet.tvl)).toFixed(2),
+      uniqueUsers: data.mainnet.uniqueUsers + data.testnet.uniqueUsers,
+      mainnet: data.mainnet,
+      testnet: data.testnet
+    })) as ChainData[];
     
     // Calculate total unique users
     const totalUniqueUsers = chains.reduce((sum, chain) => sum + chain.uniqueUsers, 0);
@@ -562,18 +614,7 @@ export default function UserProfilePage() {
 
   // Group chains by network
   const groupChainsByNetwork = (chains: ChainData[]) => {
-    const networks: Record<string, { name: string, networks: ChainData[], totalScore: number }> = {};
-
-    chains.forEach(chain => {
-      const network = chain.name.split(' ')[0];
-      if (!networks[network]) {
-        networks[network] = { name: network, networks: [], totalScore: 0 };
-      }
-      networks[network].networks.push(chain);
-      networks[network].totalScore += chain.score;
-    });
-
-    return Object.entries(networks).map(([_, value]) => value);
+    return chains; // No longer need to group as we already organized by network
   };
 
   // Helper function to get network icon
@@ -678,138 +719,151 @@ export default function UserProfilePage() {
     <main className="bg-black min-h-screen text-white">
       <div className="pt-8 pb-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
-          <div className="flex flex-col md:flex-row items-start gap-4">
-            <div className="relative">
-              <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-black">
-                <Image
-                  src={user.avatar}
-                  alt={user.name}
-                  width={128}
-                  height={128}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-lg font-semibold rounded-full w-10 h-10 flex items-center justify-center border-4 border-black">
-                {user.scores.overall}
-              </div>
-            </div>
-            
-            <div className="flex-1 pt-2 md:pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold flex items-center">
-                  {user.name}
-                </h1>
-              </div>
-              
-              <p className="text-zinc-300 mb-3">{user.bio}</p>
-              
-              <div className="flex flex-wrap gap-2 mb-3">
-                {user.skills.map(skill => (
-                  <Badge key={skill} className="bg-zinc-800 text-zinc-200">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex items-center gap-4 text-sm text-zinc-400">
-                {user.location && (
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {user.location}
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Joined {user.joinedDate}
+          <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6 mb-6">
+            <div className="flex flex-col md:flex-row items-start gap-4">
+              <div className="relative">
+                <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-black">
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={128}
+                    height={128}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
-                {user.blogUrl && (
-                  <div className="flex items-center">
-                    <Globe className="h-4 w-4 mr-1" />
-                    <a href={user.blogUrl} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 truncate">
-                      {user.blogUrl.replace(/^https?:\/\//, '')}
-                    </a>
-                  </div>
-                )}
+                <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-lg font-semibold rounded-full w-10 h-10 flex items-center justify-center border-4 border-black">
+                  {user.scores.overall}
+                </div>
               </div>
-            </div>
+              
+              <div className="flex-1 pt-2 md:pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-bold flex items-center">
+                    {user.name}
+                    {user.verified && (
+                      <svg className="w-6 h-6 ml-2 text-blue-500" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
+                      </svg>
+                    )}
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-zinc-800 text-zinc-200">@{user.username}</Badge>
+                  </div>
+                </div>
+                
+                <p className="text-zinc-300 mb-3">{user.bio}</p>
+                
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {user.skills.slice(0, 4).map(skill => (
+                    <Badge key={skill} className="bg-zinc-800 text-zinc-200">
+                      {skill}
+                    </Badge>
+                  ))}
+                  {user.skills.length > 4 && (
+                    <Badge className="bg-zinc-800 text-zinc-200">
+                      +{user.skills.length - 4}
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-4 text-sm text-zinc-400">
+                  {user.location && (
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {user.location}
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Joined {user.joinedDate}
+                  </div>
+                  {user.blogUrl && (
+                    <div className="flex items-center">
+                      <Globe className="h-4 w-4 mr-1" />
+                      <a href={user.blogUrl} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 truncate">
+                        {user.blogUrl.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            <div className="flex flex-col gap-2 mt-4 md:mt-10">
-              <div className="flex gap-2">
-                {user.twitter && (
-                  <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
+              <div className="flex flex-col gap-3 mt-4 md:mt-10">
+                <div className="flex gap-3">
+                  {user.twitter && (
+                    <Link href={`https://twitter.com/${user.twitter}`} target="_blank">
+                      <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
+                        <Twitter className="h-4 w-4 mr-2" />
+                        Twitter
+                      </Button>
+                    </Link>
+                  )}
+                  <Link href={`https://github.com/${user.username}`} target="_blank">
                     <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
-                      <Twitter className="h-4 w-4 mr-2" />
-                      Twitter
+                      <Github className="h-4 w-4 mr-2" />
+                      GitHub
                     </Button>
                   </Link>
-                )}
-                <Link href={`https://github.com/${user.username}`} target="_blank">
-                  <Button variant="outline" size="sm" className="bg-zinc-900 border-zinc-700">
-                    <Github className="h-4 w-4 mr-2" />
-                    GitHub
-                  </Button>
-                </Link>
+                </div>
+                <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700">
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share Profile
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md bg-zinc-950 border border-zinc-800">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold mb-2">Share this profile</DialogTitle>
+                      <DialogDescription className="text-zinc-400">
+                        Share {user.name}'s developer profile with your network
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col space-y-4 mt-4">
+                      <a 
+                        href={getTwitterShareUrl()} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a94e1] text-white py-2 px-4 rounded-lg font-medium"
+                      >
+                        <Twitter className="h-5 w-5" />
+                        Share on Twitter
+                      </a>
+                      <a 
+                        href={getWarpcastShareUrl()} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium"
+                      >
+                        <svg width="20" height="20" viewBox="0 0 16 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M13.7143 0H2.28571C1.02335 0 0 1.02335 0 2.28571V9.14286C0 10.4052 1.02335 11.4286 2.28571 11.4286H13.7143C14.9767 11.4286 16 10.4052 16 9.14286V2.28571C16 1.02335 14.9767 0 13.7143 0ZM11.8412 4.2473L7.84121 8.2473C7.7555 8.33301 7.63952 8.38095 7.5 8.38095C7.36048 8.38095 7.2445 8.33301 7.15879 8.2473L4.15879 5.2473C3.97826 5.06677 3.97826 4.78061 4.15879 4.60008C4.33932 4.41955 4.62548 4.41955 4.80601 4.60008L7.5 7.29407L11.194 3.60008C11.3745 3.41955 11.6607 3.41955 11.8412 3.60008C12.0217 3.78061 12.0217 4.06677 11.8412 4.2473Z"/>
+                        </svg>
+                        Share on Warpcast
+                      </a>
+                      <button 
+                        className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-2 px-4 rounded-lg font-medium"
+                        onClick={copyToClipboard}
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="h-5 w-5 text-green-400" />
+                            <span className="text-green-400">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-5 w-5" />
+                            Copy Link
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
-              <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full bg-zinc-900 border-zinc-700">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share Profile
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md bg-zinc-950 border border-zinc-800">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold mb-2">Share this profile</DialogTitle>
-                    <DialogDescription className="text-zinc-400">
-                      Share {user.name}'s developer profile with your network
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="flex flex-col space-y-4 mt-4">
-                    <a 
-                      href={getTwitterShareUrl()} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a94e1] text-white py-2 px-4 rounded-lg font-medium"
-                    >
-                      <Twitter className="h-5 w-5" />
-                      Share on Twitter
-                    </a>
-                    <a 
-                      href={getWarpcastShareUrl()} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium"
-                    >
-                      <svg width="20" height="20" viewBox="0 0 16 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13.7143 0H2.28571C1.02335 0 0 1.02335 0 2.28571V9.14286C0 10.4052 1.02335 11.4286 2.28571 11.4286H13.7143C14.9767 11.4286 16 10.4052 16 9.14286V2.28571C16 1.02335 14.9767 0 13.7143 0ZM11.8412 4.2473L7.84121 8.2473C7.7555 8.33301 7.63952 8.38095 7.5 8.38095C7.36048 8.38095 7.2445 8.33301 7.15879 8.2473L4.15879 5.2473C3.97826 5.06677 3.97826 4.78061 4.15879 4.60008C4.33932 4.41955 4.62548 4.41955 4.80601 4.60008L7.5 7.29407L11.194 3.60008C11.3745 3.41955 11.6607 3.41955 11.8412 3.60008C12.0217 3.78061 12.0217 4.06677 11.8412 4.2473Z"/>
-                      </svg>
-                      Share on Warpcast
-                    </a>
-                    <button 
-                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white py-2 px-4 rounded-lg font-medium"
-                      onClick={copyToClipboard}
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check className="h-5 w-5 text-green-400" />
-                          <span className="text-green-400">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-5 w-5" />
-                          Copy Link
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="border-t border-zinc-800 mt-2 mb-6"></div>
 
       {/* Main content section */}
       <section className="relative pb-6">
@@ -906,37 +960,34 @@ export default function UserProfilePage() {
                 
                 <div className="space-y-3">
                   {user.chains.map((chain) => (
-                    <div key={chain.name} className="bg-zinc-900/70 rounded-lg p-3">
+                    <div key={chain.name} className="bg-zinc-900/70 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center mr-2">
-                            <Layers className="h-4 w-4 text-indigo-400" />
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-medium">
+                            {getNetworkIcon(chain.name) ? (
+                              <Image
+                                src={getNetworkIcon(chain.name) as string}
+                                alt={chain.name}
+                                width={20}
+                                height={20}
+                                className="h-4 w-4 object-contain"
+                              />
+                            ) : (
+                              chain.name.charAt(0)
+                            )}
                           </div>
-                          <div>
-                            <div className="text-sm font-semibold">{chain.name}</div>
-                            <div className="text-xs text-zinc-400">{chain.transactions} transactions</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          <Score value={chain.score} />
+                          <span className="font-medium">{chain.name}</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-2 mt-3">
-                        <div>
-                          <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
-                          <div className="text-xs text-zinc-400">Transactions</div>
+                      
+                      <div className="text-xs text-zinc-400 ml-9 mb-2">
+                        <div className="flex justify-between">
+                          <span>Mainnet</span>
+                          <span>{chain.mainnet.transactions} tx</span>
                         </div>
-                        <div>
-                          <div className="text-lg font-semibold text-indigo-400">{chain.contracts}</div>
-                          <div className="text-xs text-zinc-400">Contracts</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-semibold text-indigo-400">${chain.tvl}</div>
-                          <div className="text-xs text-zinc-400">TVL</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-semibold text-indigo-400">{chain.uniqueUsers}</div>
-                          <div className="text-xs text-zinc-400">Users</div>
+                        <div className="flex justify-between">
+                          <span>Testnet</span>
+                          <span>{chain.testnet.transactions} tx</span>
                         </div>
                       </div>
                     </div>
@@ -1124,6 +1175,7 @@ export default function UserProfilePage() {
                           colorScheme="onchain"
                           title=""
                           totalCount={user.onchainActivity.totalTransactions}
+                          contributions="onchain"
                         />
                       </div>
                     )}
@@ -1133,7 +1185,12 @@ export default function UserProfilePage() {
 
               {activeTab === "github" && (
                 <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6 overflow-hidden">
-                  <h2 className="text-lg font-semibold mb-4">GitHub Activity</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">GitHub Activity</h2>
+                    <Badge className="bg-blue-900/70 text-blue-300 border-blue-700">
+                      Web2 Score: {user.scores.web2}/100
+                    </Badge>
+                  </div>
                   
                   <div className="w-full">
                     <div className="flex justify-between items-center mb-2">
@@ -1255,7 +1312,12 @@ export default function UserProfilePage() {
 
               {activeTab === "chains" && (
                 <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                  <h2 className="text-lg font-semibold mb-4">Blockchain Activity</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Blockchain Activity</h2>
+                    <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700">
+                      Web3 Score: {user.scores.onchain}/100
+                    </Badge>
+                  </div>
                   
                   {user.onchainActivity.totalTransactions > 0 ? (
                     <>
@@ -1287,69 +1349,80 @@ export default function UserProfilePage() {
                             colorScheme="onchain"
                             title=""
                             totalCount={user.onchainActivity.totalTransactions}
+                            contributions="onchain"
                           />
                         </div>
                       )}
                       
                       <div className="space-y-6">
-                        {groupChainsByNetwork(user.chains).map((networkGroup) => (
-                          <div key={networkGroup.name} className="bg-zinc-900/70 rounded-xl overflow-hidden">
+                        {user.chains.map((chain) => (
+                          <div key={chain.name} className="bg-zinc-900/70 rounded-xl overflow-hidden">
                             <div className="p-4 border-b border-zinc-800">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-md font-medium mr-3">
-                                    {getNetworkIcon(networkGroup.name) ? (
-                                      <Image
-                                        src={getNetworkIcon(networkGroup.name) as string}
-                                        alt={networkGroup.name}
-                                        width={24}
-                                        height={24}
-                                        className="h-5 w-5 object-contain"
-                                      />
-                                    ) : (
-                                      networkGroup.name.charAt(0)
-                                    )}
-                                  </div>
-                                  <span className="text-lg font-medium">{networkGroup.name}</span>
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-md font-medium mr-3">
+                                  {getNetworkIcon(chain.name) ? (
+                                    <Image
+                                      src={getNetworkIcon(chain.name) as string}
+                                      alt={chain.name}
+                                      width={24}
+                                      height={24}
+                                      className="h-5 w-5 object-contain"
+                                    />
+                                  ) : (
+                                    chain.name.charAt(0)
+                                  )}
                                 </div>
-                                <Badge className="bg-indigo-900/70 text-indigo-300 border-indigo-700 px-2">
-                                  Score: {Math.round(networkGroup.totalScore / networkGroup.networks.length)}/100
-                                </Badge>
+                                <span className="text-lg font-medium">{chain.name}</span>
                               </div>
                             </div>
                             
-                            <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {networkGroup.networks.map(chain => (
-                                <div key={chain.name} className="bg-zinc-800/50 rounded-lg p-3">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center">
-                                      <span className="font-medium text-indigo-200">{chain.name.includes('mainnet') ? 'Mainnet' : 'Testnet'}</span>
-                                    </div>
-                                    <Badge className="text-xs bg-indigo-900/70 text-indigo-300">
-                                      {chain.score}/100
-                                    </Badge>
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-4 gap-2 text-center mb-2">
+                            <div className="p-4">
+                              {/* Network Types (Mainnet/Testnet) */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="bg-zinc-800/50 rounded-lg p-3">
+                                  <div className="font-medium text-indigo-200 mb-2">Mainnet</div>
+                                  <div className="grid grid-cols-4 gap-2 text-center">
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">{chain.transactions}</div>
-                                      <div className="text-xs text-zinc-400">Transactions</div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.mainnet.transactions}</div>
+                                      <div className="text-xs text-zinc-400">Txns</div>
                                     </div>
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">{chain.contracts || 0}</div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.mainnet.contracts || 0}</div>
                                       <div className="text-xs text-zinc-400">Contracts</div>
                                     </div>
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">${chain.tvl || "0.00"}</div>
+                                      <div className="text-lg font-semibold text-indigo-400">${chain.mainnet.tvl || "0.00"}</div>
                                       <div className="text-xs text-zinc-400">TVL</div>
                                     </div>
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">{chain.uniqueUsers || 0}</div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.mainnet.uniqueUsers || 0}</div>
                                       <div className="text-xs text-zinc-400">Users</div>
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+                                
+                                <div className="bg-zinc-800/50 rounded-lg p-3">
+                                  <div className="font-medium text-indigo-200 mb-2">Testnet</div>
+                                  <div className="grid grid-cols-4 gap-2 text-center">
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.testnet.transactions}</div>
+                                      <div className="text-xs text-zinc-400">Txns</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.testnet.contracts || 0}</div>
+                                      <div className="text-xs text-zinc-400">Contracts</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">${chain.testnet.tvl || "0.00"}</div>
+                                      <div className="text-xs text-zinc-400">TVL</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-semibold text-indigo-400">{chain.testnet.uniqueUsers || 0}</div>
+                                      <div className="text-xs text-zinc-400">Users</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ))}
