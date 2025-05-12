@@ -1,16 +1,16 @@
 import { Metadata, ResolvingMetadata } from 'next';
-import { env } from '@/config/env';
+import { ReactNode } from 'react';
 
-type Props = {
-  params: { username: string };
-  children: React.ReactNode;
+type LayoutProps = {
+  children: ReactNode;
+  params: Promise<{ username: string }>;
 };
 
 export async function generateMetadata(
-  { params }: Props,
+  { params }: LayoutProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const username = params.username;
+  const username = (await params).username;
   
   // Construct base URL
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.klyro.dev';
@@ -41,6 +41,11 @@ export async function generateMetadata(
   };
 }
 
-export default function UserLayout({ children }: Props) {
+// @ts-ignore
+export default function Layout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return children;
-} 
+}

@@ -17,7 +17,7 @@ import Link from "next/link";
 import { 
   Github, 
   Twitter, 
-  Globe, 
+  Globe,
   ExternalLink, 
   Star, 
   ChevronDown, 
