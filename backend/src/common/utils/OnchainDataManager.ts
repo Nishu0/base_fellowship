@@ -12,6 +12,7 @@ export class OnchainDataManager {
         this.alchemy = new Alchemy({
             apiKey,
             network,
+            maxRetries: 5
         });
         console.log(`[OnchainDataManager] Initialized with network: ${network}`);
     }
