@@ -36,13 +36,36 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Fetch user data - since we're having issues with API_URL in the edge runtime,
-    // we'll create a fallback with mock data for testing
-    let userData = await fetchUserData(username);
+    // Fetch user data from the API
+    const userData = await fetchUserData(username);
     
-    // If we couldn't fetch real data, use mock data for testing
+    // If no data found, show an error message
     if (!userData) {
-      userData = createMockUserData(username);
+      return new ImageResponse(
+        (
+          <div
+            style={{
+              height: '100%',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(to bottom right, #000000, #1a365d)',
+              fontSize: 32,
+              fontWeight: 'bold',
+              color: 'white',
+            }}
+          >
+            <div style={{ marginBottom: 24 }}>Klyro Developer Profile</div>
+            <div style={{ fontSize: 24, opacity: 0.8 }}>{username} not found</div>
+          </div>
+        ),
+        {
+          width: 1200,
+          height: 630,
+        },
+      );
     }
     
     // Format numbers for display
@@ -59,7 +82,9 @@ export async function GET(request: NextRequest) {
     // Calculate scores
     const overallScore = userData.score?.metrics?.web2?.total && userData.score?.metrics?.web3?.total
       ? Math.round((userData.score.metrics.web2.total + userData.score.metrics.web3.total) / 2)
-      : userData.score?.metrics?.web2?.total || userData.score?.metrics?.web3?.total || 0;
+      : userData.score?.totalScore 
+        ? Math.round(userData.score.totalScore) 
+        : userData.score?.metrics?.web2?.total || userData.score?.metrics?.web3?.total || 0;
     
     const overallWorth = userData.developerWorth?.totalWorth || 0;
     
@@ -184,48 +209,39 @@ export async function GET(request: NextRequest) {
 // Function to fetch user data
 async function fetchUserData(username: string) {
   try {
-    // Get the base URL from the request or use a fallback
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    // Get the API URL properly considering the environment
+    // In the Edge runtime, we need to use environment variables carefully
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.klyro.dev';
     
     // Create a server-side compatible API client
     const response = await fetch(`${baseUrl}/fbi/status/${username}`, {
       headers: {
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      cache: 'no-store', // Don't cache in Edge runtime for fresh data
     });
     
-    const data = await response.json();
-    
-    if (!data?.data?.userData) {
-      console.error('API response missing expected data structure');
+    if (!response.ok) {
+      console.error(`API returned status: ${response.status}`);
       return null;
     }
     
-    return data.data;
+    const data = await response.json();
+    
+    // Check for required userData and shape the response to match the expected format
+    if (!data?.userData) {
+      console.error('API response missing userData');
+      return null;
+    }
+    
+    // Create a properly formatted object based on the actual API response
+    return {
+      userData: data.userData,
+      score: data.score,
+      developerWorth: data.developerWorth
+    };
   } catch (error) {
     console.error('Error fetching user data:', error);
     return null;
   }
 }
-
-// Create mock data for testing when API is not available
-function createMockUserData(username: string) {
-  return {
-    userData: {
-      name: username,
-      login: username,
-      bio: "Web3 Developer & Open Source Contributor",
-      avatar_url: `https://github.com/${username}.png?size=200`,
-    },
-    score: {
-      metrics: {
-        web2: { total: 75 },
-        web3: { total: 85 },
-      }
-    },
-    developerWorth: {
-      totalWorth: 255700,
-    }
-  };
-} 
