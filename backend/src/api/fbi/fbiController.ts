@@ -5,6 +5,8 @@ import { analyzeQueue } from './queue';
 import { PrismaClient, DataStatus } from '@prisma/client';
 import { OnchainDataManager } from '@/common/utils/OnchainDataManager';
 import { Logger } from '@/common/utils/logger';
+import { Network } from 'alchemy-sdk';
+import { getAlchemyProvider } from '@/common/utils/alchemyProvider';
 
 const prisma = new PrismaClient();
 
@@ -23,6 +25,39 @@ export class FbiController {
                 addresses: req.body.addresses
             };
 
+            // Resolve ENS names to addresses
+            const resolvedAddresses = await Promise.all(
+                request.addresses.map(async (address) => {
+                    // If it's already an address, return as is
+                    if (address.startsWith('0x')) {
+                        return address;
+                    }
+                    
+                    try {
+                        // Get Alchemy provider for mainnet
+                        const provider = getAlchemyProvider(Network.ETH_MAINNET);
+                        // Resolve ENS name
+                        const resolvedAddress = await provider.core.resolveName(address);
+                        if (resolvedAddress) {
+                            Logger.info('FbiController', 'ENS name resolved', { 
+                                ensName: address, 
+                                resolvedAddress 
+                            });
+                            return resolvedAddress;
+                        }
+                    } catch (error) {
+                        Logger.error('FbiController', 'Error resolving ENS name', { 
+                            ensName: address, 
+                            error 
+                        });
+                    }
+                    return null; // Return original if resolution fails
+                })
+            );
+
+            // Update request with resolved addresses
+            request.addresses = resolvedAddresses.filter((address): address is string => address !== null);
+
             Logger.info('FbiController', 'Checking if user exists', { githubUsername: request.githubUsername });
             // Check if user exists
             let user = await prisma.user.findFirst({
@@ -32,7 +67,8 @@ export class FbiController {
                     contractsData: true,
                     onchainData: true,
                     userScore: true,
-                    developerWorth: true
+                    developerWorth: true,
+                    wallets: true // Include wallets in the query
                 }
             });
 
@@ -65,6 +101,15 @@ export class FbiController {
                                 transactionStats: {},
                                 status: DataStatus.PENDING
                             }
+                        },
+                        // Add wallets creation
+                        wallets: {
+                            create: request.addresses.map(address => ({
+                                id: `${request.githubUsername}-${address}`,
+                                address: address,
+                                chainType: 'ethereum',
+                                chainId: '1' // Mainnet
+                            }))
                         }
                     },
                     include: {
@@ -72,7 +117,8 @@ export class FbiController {
                         contractsData: true,
                         onchainData: true,
                         userScore: true,
-                        developerWorth: true
+                        developerWorth: true,
+                        wallets: true
                     }
                 });
                 await analyzeQueue.addToQueue(request);
@@ -85,6 +131,28 @@ export class FbiController {
                     }
                 });
                 return;
+            }
+
+            // If user exists, update their wallets
+            const existingAddresses = new Set(user.wallets.map(w => w.address));
+            const newAddresses = request.addresses.filter(addr => !existingAddresses.has(addr));
+
+            if (newAddresses.length > 0) {
+                Logger.info('FbiController', 'Adding new wallets for existing user', { 
+                    githubUsername: request.githubUsername,
+                    newAddresses 
+                });
+                
+                await prisma.wallet.createMany({
+                    data: newAddresses.map(address => ({
+                        id: `${request.githubUsername}-${address}`,
+                        address: address,
+                        chainType: 'ethereum',
+                        chainId: '1', // Mainnet
+                        userId: user.id
+                    })),
+                    skipDuplicates: true
+                });
             }
 
             // Check if all data is already fetched and recent (within 24 hours)
@@ -129,7 +197,7 @@ export class FbiController {
             Logger.error('FbiController', 'Error in analyzeUser', { error });
             res.status(500).json({
                 success: false,
-                error: error instanceof Error ? error.message : 'Internal server error'
+                error: error instanceof Error ? error.message : 'Internal server error',
             });
         }
     }
@@ -146,7 +214,8 @@ export class FbiController {
                     contractsData: true,
                     onchainData: true,
                     userScore: true,
-                    developerWorth: true
+                    developerWorth: true,
+                    wallets: true
                 }
             });
 
@@ -180,7 +249,8 @@ export class FbiController {
                         contractStats: user.onchainData?.contractStats,
                         transactionStats: user.onchainData?.transactionStats,
                         score: user.userScore,
-                        developerWorth: user.developerWorth
+                        developerWorth: user.developerWorth,
+                        wallets: user.wallets
                     }
                 });
                 return;
