@@ -148,9 +148,9 @@ export default function UserDataForm() {
     <div className="flex min-h-screen bg-black text-white">
       <div className="w-full max-w-2xl mx-auto p-6 md:p-8">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">Connect Your Accounts</h1>
+          <h1 className="text-3xl font-bold mb-2">Create your Klyro Profile</h1>
           <p className="text-zinc-400">
-            Link your accounts to generate your on-chain builder profile
+          Link your data and get a shareable builder profile.
           </p>
         </div>
 

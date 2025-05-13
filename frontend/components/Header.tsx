@@ -44,7 +44,7 @@ export default function Header() {
         </p>
 
         <div className="flex flex-wrap gap-4 justify-center pt-4">
-          <Link href="/form">
+          <Link href="/create">
             <Button className="rounded-full bg-white text-black hover:bg-zinc-200 px-8 py-6 text-lg font-medium">
               Create Profile
             </Button>
