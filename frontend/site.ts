@@ -6,6 +6,6 @@ export const siteConfig = {
     twitter: "https://x.com/",
     github: "",
     linkedin: "",
-    author: "Nisarg Thakkar and Mohit Bhat",
+    author: "",
     url: "https://base-fellowship.vercel.app",
   } as const;
