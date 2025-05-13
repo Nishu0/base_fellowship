@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 // Well-known crypto repositories to check for contributions
 const CRYPTO_REPOS = [
+    // Existing major protocols
     'ethereum/go-ethereum',
     'ethereum/solidity',
     'bitcoin/bitcoin',
@@ -19,7 +20,103 @@ const CRYPTO_REPOS = [
     'aave/aave-v3-core',
     'compound-finance/compound-protocol',
     'makerdao/dss',
-    'curvefi/curve-contract'
+    'curvefi/curve-contract',
+    
+    // ZK and Privacy
+    '0xPARC/zk-bug-tracker',
+    '0xPARC/zkrepl',
+    '0xPolygonZero/plonky2',
+    'AztecProtocol/Setup',
+    'AztecProtocol/barretenberg',
+    'ConsenSys/gnark',
+    'HorizenLabs/poseidon2',
+    'Zokrates/ZoKrates',
+    'microsoft/Nova',
+    'noir-lang/noir',
+    'privacy-scaling-explorations/halo2curves',
+    'privacy-scaling-explorations/halo2wrong',
+    'privacy-scaling-explorations/sonobe',
+    'privacy-scaling-explorations/zk-kit',
+    'scipr-lab/libsnark',
+    'semaphore-protocol/semaphore',
+    'zcash/halo2',
+    'zcash/zcash',
+    'zkcrypto/bellman',
+    'zkcrypto/ff',
+    'zkcrypto/group',
+    'zkcrypto/pairing',
+    'zkp2p/zk-p2p',
+    
+    // Development Tools and Libraries
+    'OpenZeppelin/openzeppelin-contracts',
+    'OpenZeppelin/openzeppelin-contracts-upgradeable',
+    'Vectorized/solady',
+    'foundry-rs/foundry',
+    'ethereum/web3.py',
+    'ethereum/solc-js',
+    'ethereum/eth-tester',
+    'ethereum/c-kzg-4844',
+    'ethereumjs/ethereumjs-abi',
+    'ethjs/ethjs',
+    'rainbow-me/rainbowkit',
+    'thirdweb-dev/contracts',
+    'thirdweb-dev/js',
+    'transmissions11/solmate',
+    
+    // Infrastructure and Clients
+    'Consensys/teku',
+    'hyperledger/besu',
+    'hyperledger/web3j',
+    'ipfs/ipfs',
+    'ipfs/kubo',
+    'libp2p/go-libp2p',
+    'libp2p/rust-libp2p',
+    'prysmaticlabs/prysm',
+    
+    // Security and Analysis Tools
+    'crytic/echidna',
+    'crytic/slither',
+    'cgewecke/hardhat-gas-reporter',
+    'ItsNickBarry/hardhat-contract-sizer',
+    'protofire/solhint',
+    'sc-forks/solidity-coverage',
+    
+    // Educational Resources
+    'CryptozombiesHQ/cryptozombie-lessons',
+    'Cyfrin/foundry-devops',
+    'Cyfrin/foundry-full-course-f23',
+    'Cyfrin/security-and-auditing-full-course-s23',
+    'Dapp-Learning-DAO/Dapp-Learning',
+    'solidity-by-example/solidity-by-example.github.io',
+    
+    // Cryptographic Libraries and Tools
+    'arkworks-rs/algebra',
+    'arkworks-rs/crypto-primitives',
+    'arkworks-rs/groth16',
+    'arkworks-rs/marlin',
+    'arkworks-rs/snark',
+    'dalek-cryptography/bulletproofs',
+    'krzyzanowskim/CryptoSwift',
+    'lambdaclass/lambdaworks',
+    
+    // Other Important Tools and Protocols
+    'Ankr-network/ankr.js',
+    'ApeWorX/ape',
+    'Hats-Protocol/hats-protocol',
+    'Tenderly/tenderly-cli',
+    'TrueBlocks/trueblocks-core',
+    'blockchain-etl/ethereum-etl',
+    'bluealloy/revm',
+    'eth-infinitism/account-abstraction',
+    'iden3/circom',
+    'iden3/snarkjs',
+    'merkletreejs/merkletreejs',
+    'paradigmxyz/cryo',
+    'pcaversaccio/snekmate',
+    'poap-xyz/poap.js',
+    'rust-ethereum/evm',
+    'scaffold-eth/scaffold-eth-2',
+    'starkware-libs/cairo-lang'
 ];
 
 // Default thresholds if not present in platform config
@@ -150,6 +247,26 @@ export class ScoreService {
         }
     }
 
+    private async getCryptoRepos(): Promise<string[]> {
+        try {
+            const platformConfig = await prisma.platformConfig.findUnique({
+                where: { name: "default" }
+            });
+            
+            if (!platformConfig?.cryptoRepos) {
+                Logger.warn('ScoreService', 'No crypto repos found in platform config, using empty list');
+                return [];
+            }
+
+            const cryptoReposData = platformConfig.cryptoRepos as { repositories: string[] };
+            Logger.info('ScoreService', 'Crypto repos found in platform config', { cryptoReposData: cryptoReposData.repositories.length });
+            return cryptoReposData.repositories || [];
+        } catch (error) {
+            Logger.error('ScoreService', 'Error fetching crypto repos from database', error);
+            return [];
+        }
+    }
+
     private async calculateWeb3Score(
         user: any, 
         metrics: Record<string, any>, 
@@ -277,13 +394,15 @@ export class ScoreService {
 
         // 5. Crypto Repo Contributions
         if (githubData) {
-            const repos = githubData.repos as any;
+            const repos = githubData.languagesData as any;
             const contributions = repos.repoContributions || {};
             
             let totalCryptoContributions = 0;
             const cryptoRepoContributions: Record<string, number> = {};
 
-            CRYPTO_REPOS.forEach(repo => {
+            const cryptoRepos = await this.getCryptoRepos();
+            
+            cryptoRepos.forEach(repo => {
                 const contribution = contributions[repo] || 0;
                 if (contribution > 0) {
                     cryptoRepoContributions[repo] = contribution;
@@ -539,7 +658,9 @@ export class ScoreService {
             const contributions = repos.repoContributions || {};
             
             let totalCryptoContributions = 0;
-            CRYPTO_REPOS.forEach(repo => {
+            const cryptoRepos = await this.getCryptoRepos();
+            
+            cryptoRepos.forEach(repo => {
                 totalCryptoContributions += contributions[repo] || 0;
             });
             web3Metrics.experienceValue += totalCryptoContributions * multipliers.experience.cryptoRepoContribution;
@@ -665,3 +786,5 @@ export class ScoreService {
         return {totalWorth, web2Metrics};
     }
 } 
+
+

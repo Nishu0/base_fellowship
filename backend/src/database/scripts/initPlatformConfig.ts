@@ -55,7 +55,7 @@ const defaultConfig = {
             experience: {
                 mainnetContract: 2000,    // Reduced from 5000
                 testnetContract: 500,     // Reduced from 2000
-                cryptoRepoContribution: 200 // Reduced from 1000
+                cryptoRepoContribution: 60 // Reduced from 1000
             },
             skill: {
                 solidity: 0.000002,           // Reduced from 0.1
@@ -94,6 +94,130 @@ const defaultConfig = {
         [Network.BASE_MAINNET]: true,
         [Network.BASE_SEPOLIA]: true,
         [Network.MATIC_MAINNET]: false,
+    },
+    cryptoRepos: {
+        repositories: [
+            // Existing major protocols
+            'ethereum/go-ethereum',
+            'ethereum/solidity',
+            'bitcoin/bitcoin',
+            'solana-labs/solana',
+            'cosmos/cosmos-sdk',
+            'paritytech/substrate',
+            'near/nearcore',
+            'aptos-labs/aptos-core',
+            'matter-labs/zksync',
+            'starkware-libs/starkex-contracts',
+            'Uniswap/v3-core',
+            'aave/aave-v3-core',
+            'compound-finance/compound-protocol',
+            'makerdao/dss',
+            'curvefi/curve-contract',
+            
+            // ZK and Privacy
+            '0xPARC/zk-bug-tracker',
+            '0xPARC/zkrepl',
+            '0xPolygonZero/plonky2',
+            'AztecProtocol/Setup',
+            'AztecProtocol/barretenberg',
+            'ConsenSys/gnark',
+            'HorizenLabs/poseidon2',
+            'Zokrates/ZoKrates',
+            'microsoft/Nova',
+            'noir-lang/noir',
+            'privacy-scaling-explorations/halo2curves',
+            'privacy-scaling-explorations/halo2wrong',
+            'privacy-scaling-explorations/sonobe',
+            'privacy-scaling-explorations/zk-kit',
+            'scipr-lab/libsnark',
+            'semaphore-protocol/semaphore',
+            'zcash/halo2',
+            'zcash/zcash',
+            'zkcrypto/bellman',
+            'zkcrypto/ff',
+            'zkcrypto/group',
+            'zkcrypto/pairing',
+            'zkp2p/zk-p2p',
+            
+            // Development Tools and Libraries
+            'OpenZeppelin/openzeppelin-contracts',
+            'OpenZeppelin/openzeppelin-contracts-upgradeable',
+            'Vectorized/solady',
+            'foundry-rs/foundry',
+            'ethereum/web3.py',
+            'ethereum/solc-js',
+            'ethereum/eth-tester',
+            'ethereum/c-kzg-4844',
+            'ethereumjs/ethereumjs-abi',
+            'ethjs/ethjs',
+            'rainbow-me/rainbowkit',
+            'thirdweb-dev/contracts',
+            'thirdweb-dev/js',
+            'transmissions11/solmate',
+            
+            // Infrastructure and Clients
+            'Consensys/teku',
+            'hyperledger/besu',
+            'hyperledger/web3j',
+            'ipfs/ipfs',
+            'ipfs/kubo',
+            'libp2p/go-libp2p',
+            'libp2p/rust-libp2p',
+            'prysmaticlabs/prysm',
+            
+            // Security and Analysis Tools
+            'crytic/echidna',
+            'crytic/slither',
+            'cgewecke/hardhat-gas-reporter',
+            'ItsNickBarry/hardhat-contract-sizer',
+            'protofire/solhint',
+            'sc-forks/solidity-coverage',
+            
+            // Educational Resources
+            'CryptozombiesHQ/cryptozombie-lessons',
+            'Cyfrin/foundry-devops',
+            'Cyfrin/foundry-full-course-f23',
+            'Cyfrin/security-and-auditing-full-course-s23',
+            'Dapp-Learning-DAO/Dapp-Learning',
+            'solidity-by-example/solidity-by-example.github.io',
+            
+            // Cryptographic Libraries and Tools
+            'arkworks-rs/algebra',
+            'arkworks-rs/crypto-primitives',
+            'arkworks-rs/groth16',
+            'arkworks-rs/marlin',
+            'arkworks-rs/snark',
+            'dalek-cryptography/bulletproofs',
+            'krzyzanowskim/CryptoSwift',
+            'lambdaclass/lambdaworks',
+            
+            // Other Important Tools and Protocols
+            'Ankr-network/ankr.js',
+            'ApeWorX/ape',
+            'Hats-Protocol/hats-protocol',
+            'Tenderly/tenderly-cli',
+            'TrueBlocks/trueblocks-core',
+            'blockchain-etl/ethereum-etl',
+            'bluealloy/revm',
+            'eth-infinitism/account-abstraction',
+            'iden3/circom',
+            'iden3/snarkjs',
+            'merkletreejs/merkletreejs',
+            'paradigmxyz/cryo',
+            'pcaversaccio/snekmate',
+            'poap-xyz/poap.js',
+            'rust-ethereum/evm',
+            'scaffold-eth/scaffold-eth-2',
+            'starkware-libs/cairo-lang',
+            'alloy-rs/alloy',
+            'alloy-rs/core',
+            'noir-lang/noir',
+            'paradigmxyz/reth',
+            'Layr-Labs/eigensdk-rs',
+
+
+        ],
+        lastUpdated: new Date().toISOString()
     }
 };
 
@@ -118,7 +242,8 @@ async function initPlatformConfig() {
                     thresholds: defaultConfig.thresholds,
                     weights: defaultConfig.weights,
                     developerWorthMultipliers: defaultConfig.developerWorthMultipliers,
-                    enabledChains: defaultConfig.enabledChains
+                    enabledChains: defaultConfig.enabledChains,
+                    cryptoRepos: defaultConfig.cryptoRepos
                 }
             });
             console.log("Default platform configuration updated successfully");
