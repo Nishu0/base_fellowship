@@ -286,6 +286,7 @@ export class FbiService {
                             chainContracts = [...chainContracts, ...contracts];
                         }
 
+                        Logger.info('FbiService', `Getting onchain history for addresses: ${request.addresses} on chain: ${chain}`);
                         // Get history for this chain
                         let chainHistory: any = [];
                         for (const address of request.addresses) {
@@ -294,6 +295,13 @@ export class FbiService {
                             chainHistory = [...chainHistory, ...history];
                         }
 
+                        Logger.info('FbiService', `Chain ${chain} processed for userId: ${user.id}`);
+                        Logger.info('FbiService', `Chain ${chain} contracts: ${chainContracts.length}`);
+                        Logger.info('FbiService', `Chain ${chain} history: ${chainHistory.length}`);
+
+
+                        
+
                         // Calculate contract statistics for this chain
                         const contractStats = {
                             mainnet: chainContracts.filter((c: any) => !c.isTestnet).length,
@@ -301,6 +309,7 @@ export class FbiService {
                             total: chainContracts.length
                         };
 
+                        
                         // Calculate transaction statistics for this chain
                         const transactionStats = {
                             mainnet: {
