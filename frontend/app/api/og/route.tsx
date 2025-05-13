@@ -80,11 +80,13 @@ export async function GET(request: NextRequest) {
     };
     
     // Calculate scores
-    const overallScore = userData.score?.metrics?.web2?.total && userData.score?.metrics?.web3?.total
-      ? Math.round((userData.score.metrics.web2.total + userData.score.metrics.web3.total) / 2)
+    const web2Score = userData.score?.metrics?.web2?.total || 0; 
+    const web3Score = userData.score?.metrics?.web3?.total || 0;
+    const overallScore = web2Score && web3Score
+      ? Math.round((web2Score + web3Score) / 2)
       : userData.score?.totalScore 
         ? Math.round(userData.score.totalScore) 
-        : userData.score?.metrics?.web2?.total || userData.score?.metrics?.web3?.total || 0;
+        : web2Score || web3Score || 0;
     
     const overallWorth = userData.developerWorth?.totalWorth || 0;
     
@@ -104,8 +106,22 @@ export async function GET(request: NextRequest) {
             position: 'relative',
           }}
         >
+          {/* Grid pattern overlay */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundImage: 'linear-gradient(to right, rgba(30, 41, 59, 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgba(30, 41, 59, 0.2) 1px, transparent 1px)',
+              backgroundSize: '30px 30px',
+              zIndex: 1,
+            }}
+          />
+                  
           {/* Avatar and Name Section */}
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20, zIndex: 2 }}>
             <div
               style={{
                 borderRadius: '50%',
@@ -132,18 +148,20 @@ export async function GET(request: NextRequest) {
             </div>
           </div>
           
-          {/* Score & Worth Section (Bottom Right) */}
-          <div
+          {/* Score Cards Row */}
+          <div 
             style={{
               position: 'absolute',
               bottom: 50,
+              left: 50,
               right: 50,
               display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
+              justifyContent: 'space-between',
               gap: 15,
+              zIndex: 2,
             }}
           >
+            {/* Overall Score */}
             <div
               style={{
                 background: 'rgba(0, 0, 0, 0.3)',
@@ -152,44 +170,77 @@ export async function GET(request: NextRequest) {
                 backdropFilter: 'blur(8px)',
                 display: 'flex',
                 flexDirection: 'column',
+                border: '1px solid rgba(79, 70, 229, 0.3)',
+                minWidth: '300px',
               }}
             >
-              <div style={{ fontSize: 28, color: '#a1a1aa' }}>Overall Score</div>
-              <div style={{ fontSize: 54, fontWeight: 'bold', display: 'flex', alignItems: 'baseline' }}>
+              <div style={{ fontSize: 24, color: '#a1a1aa' }}>Overall Klyro Score</div>
+              <div style={{ fontSize: 64, fontWeight: 'bold', display: 'flex', alignItems: 'baseline' }}>
                 {overallScore}<span style={{ fontSize: 36, opacity: 0.6, marginLeft: 5 }}>/100</span>
               </div>
             </div>
             
-            <div
-              style={{
-                background: 'rgba(0, 0, 0, 0.3)',
-                padding: '15px 25px',
-                borderRadius: 16,
-                backdropFilter: 'blur(8px)',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <div style={{ fontSize: 28, color: '#a1a1aa' }}>Overall Worth</div>
-              <div style={{ fontSize: 54, fontWeight: 'bold' }}>${formatNumber(overallWorth)}</div>
-            </div>
-            
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#a1a1aa', display: 'flex' }}>
-              <span style={{ color: '#60a5fa' }}>Klyro</span>
-              <span style={{ marginLeft: 5 }}>Score</span>
+            {/* Score Breakdown */}
+            <div style={{ display: 'flex', gap: 15 }}>
+              {/* GitHub Score */}
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '15px 25px',
+                  borderRadius: 16,
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                }}
+              >
+                <div style={{ fontSize: 24, color: '#a1a1aa' }}>GitHub Score</div>
+                <div style={{ fontSize: 48, fontWeight: 'bold', display: 'flex', alignItems: 'baseline', color: '#38bdf8' }}>
+                  {Math.round(web2Score)}<span style={{ fontSize: 24, opacity: 0.6, marginLeft: 5 }}>/100</span>
+                </div>
+              </div>
+              
+              {/* Onchain Score */}
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '15px 25px',
+                  borderRadius: 16,
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                }}
+              >
+                <div style={{ fontSize: 24, color: '#a1a1aa' }}>Onchain Score</div>
+                <div style={{ fontSize: 48, fontWeight: 'bold', display: 'flex', alignItems: 'baseline', color: '#8b5cf6' }}>
+                  {Math.round(web3Score)}<span style={{ fontSize: 24, opacity: 0.6, marginLeft: 5 }}>/100</span>
+                </div>
+              </div>
+              
+              {/* Worth */}
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '15px 25px',
+                  borderRadius: 16,
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
+              >
+                <div style={{ fontSize: 24, color: '#a1a1aa' }}>Developer Worth</div>
+                <div style={{ fontSize: 48, fontWeight: 'bold', color: '#22c55e' }}>${formatNumber(overallWorth)}</div>
+              </div>
             </div>
           </div>
           
           {/* Klyro Logo */}
-          <div style={{ position: 'absolute', top: 50, right: 50, opacity: 0.7 }}>
-            <svg width="120" height="40" viewBox="0 0 120 40" fill="none" style={{ display: 'block' }}>
-              <path d="M22.32 8H15.76V32H22.32V8Z" fill="white"/>
-              <path d="M0 8V32H6.56V22.88H13.44V17.2H6.56V13.68H15.76V8H0Z" fill="white"/>
-              <path d="M42.0059 8L33.9259 18.24V8H27.3659V32H33.9259V21.76L42.0059 32H50.0859L39.7659 19.36L49.6059 8H42.0059Z" fill="white"/>
-              <path d="M69.2425 18.64C69.2425 21.6 67.1625 22.56 64.9225 22.56C62.6825 22.56 60.6025 21.6 60.6025 18.64V8H54.0425V19.76C54.0425 27.84 60.4425 32.48 64.9225 32.48C69.4025 32.48 75.8025 27.84 75.8025 19.76V8H69.2425V18.64Z" fill="white"/>
-              <path d="M96.7242 8H80.9642V13.68H85.2842V32H91.8442V13.68H96.7242V8Z" fill="white"/>
-              <path d="M117.157 8H98.4766V32H117.157V26.32H105.037V22.64H115.557V17.44H105.037V13.68H117.157V8Z" fill="white"/>
-            </svg>
+          <div style={{ position: 'absolute', top: 50, right: 50, opacity: 0.7, zIndex: 2 }}>
+            <div style={{ fontSize: 48, fontWeight: 'bold', fontStyle: 'italic', color: 'white' }}>
+              Klyro
+            </div>
           </div>
         </div>
       ),
@@ -229,17 +280,13 @@ async function fetchUserData(username: string) {
     const data = await response.json();
     
     // Check for required userData and shape the response to match the expected format
-    if (!data?.userData) {
+    if (!data?.data?.userData) {
       console.error('API response missing userData');
       return null;
     }
     
     // Create a properly formatted object based on the actual API response
-    return {
-      userData: data.userData,
-      score: data.score,
-      developerWorth: data.developerWorth
-    };
+    return data.data;
   } catch (error) {
     console.error('Error fetching user data:', error);
     return null;

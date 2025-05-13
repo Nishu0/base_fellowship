@@ -227,7 +227,13 @@ export default function UserProfilePage() {
   
   // Generate Twitter share URL
   const getTwitterShareUrl = () => {
-    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareUrl())}`;
+    if (!userData) return '';
+    const githubScore = userData.score?.metrics?.web2?.total || 0;
+    const onchainScore = userData.score?.metrics?.web3?.total || 0;
+    const overallScore = Math.round((githubScore + onchainScore) / 2);
+    
+    const shareText = `Check out my Klyro developer profile!\n\nKlyro Score: ${overallScore}/100\nOnchain Score: ${onchainScore}/100\nGitHub Score: ${githubScore}/100\n\n`;
+    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(getShareUrl())}`;
   };
   
   // Generate Warpcast share URL
