@@ -5,7 +5,7 @@ export class OnchainDataManager {
     private alchemy: Alchemy;
     private network: Network;
     private readonly MAX_RETRIES = 10;
-    private readonly INITIAL_DELAY = 3000; // 3 second
+    private readonly INITIAL_DELAY = 1000; // 3 second
     private readonly BLOCK_RETRIES = 4; // Specific retries for getBlock
 
     constructor(apiKey: string, network: Network = Network.ETH_MAINNET) {
@@ -398,5 +398,23 @@ export class OnchainDataManager {
             totalWins: finalistPacksResult.count,
             totalHacker: communityPacksResult.count
         };
+    }
+
+        /**
+     * Helper function to get the current block number
+     */
+    async getHalfBlock(): Promise<string> {
+        try {
+            console.log(`[getCurrentBlock] Getting current block number`);
+            const blockNumber = await this.retryWithBackoff(
+                () => this.alchemy.core.getBlockNumber(),
+                'getCurrentBlock'
+            );
+            const halfBlockNumber = Math.floor(blockNumber / 2);
+            return `0x${halfBlockNumber.toString(16)}`;
+        } catch (error) {
+            console.error('[getCurrentBlock] Error getting current block number:', error);
+            throw error;
+        }
     }
 } 

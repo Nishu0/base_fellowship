@@ -283,11 +283,15 @@ export class FbiService {
                         Logger.info('FbiService', `Processing chain: ${chain} for userId: ${user.id}`);
                         const onchainDataManager = new OnchainDataManager(alchemyApiKey, chain);
                         
+                        // Get the start block number (half of current block)
+                        const startBlock = await onchainDataManager.getHalfBlock();
+                        Logger.info('FbiService', `Using start block: ${startBlock} for chain: ${chain}`);
+
                         // Get contracts for this chain
                         let chainContracts: any = [];
                         for (const address of request.addresses) {
                             Logger.info('FbiService', `Getting contracts deployed by address: ${address} on chain: ${chain}`);
-                            const contracts = await onchainDataManager.getContractsDeployedByAddress(address, "0x0", "latest");
+                            const contracts = await onchainDataManager.getContractsDeployedByAddress(address, startBlock, "latest");
                             chainContracts = [...chainContracts, ...contracts];
                         }
 
@@ -296,7 +300,7 @@ export class FbiService {
                         let chainHistory: any = [];
                         for (const address of request.addresses) {
                             Logger.info('FbiService', `Getting onchain history for address: ${address} on chain: ${chain}`);
-                            const history = await onchainDataManager.getOnchainHistoryForAddresses([address], "0x0", "latest");
+                            const history = await onchainDataManager.getOnchainHistoryForAddresses([address], startBlock, "latest");
                             chainHistory = [...chainHistory, ...history];
                         }
 
@@ -490,4 +494,6 @@ export class FbiService {
             throw error;
         }
     }
+
+    
 } 
