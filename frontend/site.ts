@@ -1,8 +1,8 @@
 export const siteConfig = {
-    name: "FBI: Find Builders Intelligently",
+    name: "Klyro",
     description:
-      "FBI: Find Builders Intelligently - The ultimate platform for hackathon organizers to discover and evaluate top blockchain talent based on verifiable onchain credentials and contributions.",
-    ogImage: "https://res.cloudinary.com/dyk5s8gbw/image/upload/v1746126866/qvjvjpdfsexmewrxqdvo.png",
+      "Klyro: Helping you find the best builders with Real and Verifiable Data",
+    ogImage: "https://res.cloudinary.com/dyk5s8gbw/image/upload/v1747118059/ulwgqscwexlufntijzk1.png",
     twitter: "https://x.com/",
     github: "",
     linkedin: "",

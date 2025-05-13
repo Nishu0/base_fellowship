@@ -16,15 +16,6 @@ export default function FooterNew() {
             <Link
               className="size-[52px] md:size-[60px] bg-white grid place-items-center border border-joule_gray-15 rounded-xl group -mt-5"
               target="_blank"
-              href="https://t.me/"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="size-8 transition-all md:size-8" width="35" height="35" viewBox="0 0 35 35" fill="inherit">
-  <path d="M27.6261 7.59312C24.407 8.9264 10.6038 14.6439 6.78994 16.2021C4.23221 17.2003 5.72954 18.1361 5.72954 18.1361C5.72954 18.1361 7.91286 18.8847 9.78458 19.4461C11.656 20.0076 12.6542 19.3839 12.6542 19.3839L21.4503 13.4574C24.5694 11.3363 23.8209 13.083 23.0721 13.8318C21.4503 15.4539 18.7677 18.0113 16.5219 20.0701C15.5238 20.9434 16.0227 21.692 16.4596 22.0664C18.0815 23.4389 22.5109 26.2462 22.7603 26.4333C24.0781 27.3663 26.6704 28.7092 27.0646 25.8718L28.6242 16.0776C29.1234 12.7714 29.6224 9.71444 29.6846 8.84111C29.8719 6.71979 27.6261 7.59312 27.6261 7.59312Z" className="fill-black group-hover:fill-joule_orange transition-colors" />
-              </svg>
-            </Link>
-            <Link
-              className="size-[52px] md:size-[60px] bg-white grid place-items-center border border-joule_gray-15 rounded-xl group -mt-5"
-              target="_blank"
               href="https://x.com/aiagentw"
             >
             <svg xmlns="http://www.w3.org/2000/svg" className="size-8 transition-all md:size-8" width="35" height="35" viewBox="0 0 35 35" fill="none">
