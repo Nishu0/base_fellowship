@@ -1523,7 +1523,7 @@ console.log("userData",userData);
                     <h2 className="text-lg font-semibold">Hackathon Achievements</h2>
                     {userData?.hackathonData && (userData.hackathonData.totalWins > 0 || userData.hackathonData.totalHacker > 0) && (
                       <Badge className="bg-purple-900/70 text-purple-300 border-purple-700">
-                        ETHGlobal Hacker
+                        Hacker Experience
                       </Badge>
                     )}
                   </div>
@@ -1689,7 +1689,7 @@ console.log("userData",userData);
                       
                       {/* Wins Section */}
                       <div>
-                        <h3 className="text-md font-medium text-zinc-200 mb-4">ETHGlobal Hackathon Finalists</h3>
+                        <h3 className="text-md font-medium text-zinc-200 mb-4">Hackathon Wins</h3>
                         {userData.hackathonData.WINS.count > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                             {Object.keys(userData.hackathonData.WINS.packs).map((hackathon) => (
@@ -1707,7 +1707,7 @@ console.log("userData",userData);
                         ) : (
                           <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
                             <Trophy className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
-                            <p className="text-zinc-500">No hackathon finalists yet. Keep building!</p>
+                            <p className="text-zinc-500">No hackathon wins yet. Keep building!</p>
                           </div>
                         )}
                       </div>
@@ -1717,7 +1717,7 @@ console.log("userData",userData);
                       <Trophy className="w-16 h-16 mx-auto text-zinc-700 mb-4" />
                       <h3 className="text-xl font-medium text-zinc-400 mb-2">No Hackathon Data</h3>
                       <p className="text-zinc-500 max-w-md mx-auto">
-                        No ETHGlobal hackathon data found for this user. Try connecting your ETHGlobal wallet to display your achievements.
+                        No hackathon data found for this user. Try connecting your ETHGlobal wallet to display your achievements.
                       </p>
                     </div>
                   )}
