@@ -419,7 +419,9 @@ console.log("userData",userData);
         uniqueUsers: 0
       };
     }
-    console.log("processOnchainData", userData?.contractsDeployed);
+    
+    // Add debugging log
+    console.log("contractsDeployed data:", userData?.contractsDeployed);
 
     const transactions: any[] = [];
     const chainGroups: Record<string, {
@@ -470,22 +472,16 @@ console.log("userData",userData);
         tvl = contractsData.reduce((sum, contract) => sum + (parseFloat(contract.tvl || "0")), 0);
       }
       
-      // Count unique users by directly summing the uniqueUsers field from each contract
+      // Calculate unique users directly from contract data
       let uniqueUsers = 0;
       if (contractsData.length > 0) {
-        // Directly sum the uniqueUsers field from each contract
         uniqueUsers = contractsData.reduce((sum, contract) => {
-          const userCount = typeof contract.uniqueUsers === 'number' ? contract.uniqueUsers : 0;
+          // Make sure we're handling undefined/null values properly
+          const userCount = contract.uniqueUsers !== undefined && contract.uniqueUsers !== null 
+            ? Number(contract.uniqueUsers) 
+            : 0;
           return sum + userCount;
         }, 0);
-      } else {
-        // If no contract data, use unique transaction addresses as a proxy
-        const uniqueAddresses = new Set();
-        txs.forEach(tx => {
-          if (tx.from) uniqueAddresses.add(tx.from);
-          if (tx.to) uniqueAddresses.add(tx.to);
-        });
-        uniqueUsers = uniqueAddresses.size;
       }
       
       // If network already exists, update values
@@ -546,8 +542,20 @@ console.log("userData",userData);
       testnet: data.testnet
     })) as ChainData[];
     
-    // Calculate total unique users - this is the sum of unique users across all chains
-    const totalUniqueUsers = chains.reduce((sum, chain) => sum + chain.uniqueUsers, 0);
+    // Calculate total unique users directly from contractsDeployed
+    // This ensures we handle empty arrays correctly
+    let totalUniqueUsers = 0;
+    if (userData.contractsDeployed) {
+      Object.values(userData.contractsDeployed).forEach(contracts => {
+        if (Array.isArray(contracts)) {
+          contracts.forEach(contract => {
+            if (contract.uniqueUsers !== undefined && contract.uniqueUsers !== null) {
+              totalUniqueUsers += Number(contract.uniqueUsers);
+            }
+          });
+        }
+      });
+    }
     
     // Find top chain by transaction count
     const topChain = chains.length > 0 
