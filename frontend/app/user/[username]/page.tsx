@@ -52,6 +52,25 @@ const formatNumber = (value: number): string => {
   }
 };
 
+// Format TVL values with proper currency formatting
+const formatTVL = (value: string | number): string => {
+  // Convert to number if it's a string
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  // Handle invalid or zero values
+  if (isNaN(numValue) || numValue === 0) return "$0.00";
+  
+  // Format based on value size
+  if (numValue >= 1000000) {
+    return `$${(numValue / 1000000).toFixed(2)}M`;
+  } else if (numValue >= 1000) {
+    return `$${(numValue / 1000).toFixed(2)}K`;
+  } else {
+    // Add commas to separate thousands
+    return `$${numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  }
+};
+
 // Add interface for ChainData to ensure consistent typing
 interface ChainData {
   name: string;
@@ -1175,7 +1194,7 @@ console.log("userData",userData);
                       </div>
                       <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">
-                          ${user.chains.reduce((sum, chain) => sum + parseFloat(chain.tvl || "0"), 0).toFixed(2)}
+                          {formatTVL(user.chains.reduce((sum, chain) => sum + parseFloat(chain.tvl || "0"), 0))}
                         </div>
                         <div className="text-xs text-zinc-400">Total TVL</div>
                       </div>
@@ -1494,7 +1513,7 @@ console.log("userData",userData);
                                       <div className="text-xs text-zinc-400">Contracts</div>
                                     </div>
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">${chain.mainnet.tvl || "0.00"}</div>
+                                      <div className="text-lg font-semibold text-indigo-400">{formatTVL(chain.mainnet.tvl)}</div>
                                       <div className="text-xs text-zinc-400">TVL</div>
                                     </div>
                                     <div>
@@ -1516,7 +1535,7 @@ console.log("userData",userData);
                                       <div className="text-xs text-zinc-400">Contracts</div>
                                     </div>
                                     <div>
-                                      <div className="text-lg font-semibold text-indigo-400">${chain.testnet.tvl || "0.00"}</div>
+                                      <div className="text-lg font-semibold text-indigo-400">{formatTVL(chain.testnet.tvl)}</div>
                                       <div className="text-xs text-zinc-400">TVL</div>
                                     </div>
                                     <div>
