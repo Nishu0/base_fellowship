@@ -879,7 +879,21 @@ console.log("userData",userData);
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a94e1] text-white py-2 px-4 rounded-lg font-medium"
                       >
-                        <Twitter className="h-5 w-5" />
+                        <svg xmlns="http://www.w3.org/2000/svg" className="size-8 transition-all md:size-8" width="35" height="35" viewBox="0 0 35 35" fill="none">
+  <g clipPath="url(#clip0_8588_28065)">
+    <mask id="mask0_8588_28065" mask-type="luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="35" height="35">
+      <path d="M34.2721 0.729736H0.725311V34.2765H34.2721V0.729736Z" fill="white" />
+    </mask>
+    <g mask="url(#mask0_8588_28065)">
+      <path d="M24.0418 7.28345H27.5097L19.9334 15.9427L28.8463 27.726H21.8675L16.4015 20.5795L10.1471 27.726H6.67718L14.7808 18.4639L6.23059 7.28345H13.3865L18.3273 13.8156L24.0418 7.28345ZM22.8247 25.6503H24.7463L12.3424 9.25013H10.2803L22.8247 25.6503Z" className="fill-black group-hover:fill-joule_orange transition-colors" />
+    </g>
+  </g>
+  <defs>
+    <clipPath id="clip0_8588_28065">
+      <rect width="33.5467" height="33.5467" fill="white" transform="translate(0.720398 0.723633)" />
+    </clipPath>
+  </defs>
+            </svg>
                         Share on Twitter
                       </a>
                       <a 
@@ -888,9 +902,12 @@ console.log("userData",userData);
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium"
                       >
-                        <svg width="20" height="20" viewBox="0 0 16 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M13.7143 0H2.28571C1.02335 0 0 1.02335 0 2.28571V9.14286C0 10.4052 1.02335 11.4286 2.28571 11.4286H13.7143C14.9767 11.4286 16 10.4052 16 9.14286V2.28571C16 1.02335 14.9767 0 13.7143 0ZM11.8412 4.2473L7.84121 8.2473C7.7555 8.33301 7.63952 8.38095 7.5 8.38095C7.36048 8.38095 7.2445 8.33301 7.15879 8.2473L4.15879 5.2473C3.97826 5.06677 3.97826 4.78061 4.15879 4.60008C4.33932 4.41955 4.62548 4.41955 4.80601 4.60008L7.5 7.29407L11.194 3.60008C11.3745 3.41955 11.6607 3.41955 11.8412 3.60008C12.0217 3.78061 12.0217 4.06677 11.8412 4.2473Z"/>
-                        </svg>
+                        <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M4.28994 0H20.4142V25H18.0473V13.5484H18.0241C17.7625 10.3834 15.323 7.90323 12.3521 7.90323C9.38119 7.90323 6.94161 10.3834 6.68002 13.5484H6.65681V25H4.28994V0Z" fill="white"/>
+<path d="M0 3.54839L0.961538 7.09677H1.77515V21.4516C1.36665 21.4516 1.0355 21.8127 1.0355 22.2581V23.2258H0.887574C0.479079 23.2258 0.147929 23.5869 0.147929 24.0323V25H8.43195V24.0323C8.43195 23.5869 8.1008 23.2258 7.69231 23.2258H7.54438V22.2581C7.54438 21.8127 7.21323 21.4516 6.80473 21.4516H5.91716V3.54839H0Z" fill="white"/>
+<path d="M18.1953 21.4516C17.7868 21.4516 17.4556 21.8127 17.4556 22.2581V23.2258H17.3077C16.8992 23.2258 16.568 23.5869 16.568 24.0323V25H24.8521V24.0323C24.8521 23.5869 24.5209 23.2258 24.1124 23.2258H23.9645V22.2581C23.9645 21.8127 23.6333 21.4516 23.2249 21.4516V7.09677H24.0385L25 3.54839H19.0828V21.4516H18.1953Z" fill="white"/>
+</svg>
+
                         Share on Warpcast
                       </a>
                       <button 
