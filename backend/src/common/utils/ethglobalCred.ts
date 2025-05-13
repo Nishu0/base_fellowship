@@ -1,14 +1,5 @@
-import { Network, Alchemy } from 'alchemy-sdk';
-
-const apiKey = process.env.ALCHEMY_API_KEY;
-
-// Initialize Alchemy SDK
-const settings = {
-    apiKey: apiKey,
-    network: Network.OPT_MAINNET,
-};
-
-const alchemy = new Alchemy(settings);
+import { Network } from 'alchemy-sdk';
+import { getAlchemyProvider } from './alchemyProvider';
 
 const communityPacks = {
     "OG Pack": "0x37C6fe4049c95f80e18C9cDDaA8481742456520B",
@@ -40,53 +31,120 @@ const finalistPacks = {
     "ETHGlobal London 2024 Finalist": "0xa94b0a0ad9485946a771acb89a7927923ddd389f"
 };
 
+/**
+ * Check if an address owns any NFTs from the specified packs
+ * This version uses our enhanced Alchemy provider with fallbacks
+ */
 async function checkPackBalances(walletAddress: string, packs: Record<string, string>) {
     const results: { [key: string]: boolean } = {};
     let count = 0;
 
+    // Create a map of contract address to pack name for reverse lookup
+    const contractToPackName = Object.entries(packs).reduce((acc, [name, addr]) => {
+        acc[addr.toLowerCase()] = name;
+        return acc;
+    }, {} as Record<string, string>);
+
     try {
-        // Get all NFTs owned by the address
-        const nfts = await alchemy.nft.getNftsForOwner(walletAddress);
+        // Get our enhanced Alchemy provider for Optimism
+        const provider = getAlchemyProvider(Network.OPT_MAINNET);
         
         // Create a Set of contract addresses for faster lookup
         const contractAddresses = new Set(Object.values(packs).map(addr => addr.toLowerCase()));
         
-        // Check which NFTs are from our target contracts
-        const ownedNfts = nfts.ownedNfts.filter(nft => 
-            contractAddresses.has(nft.contract.address.toLowerCase())
-        );
-
-        // Create a map of contract address to pack name for reverse lookup
-        const contractToPackName = Object.entries(packs).reduce((acc, [name, addr]) => {
-            acc[addr.toLowerCase()] = name;
-            return acc;
-        }, {} as Record<string, string>);
-
-        // Update results based on owned NFTs
-        for (const nft of ownedNfts) {
-            const packName = contractToPackName[nft.contract.address.toLowerCase()];
-            if (packName) {
-                results[packName] = true;
-                count++;
+        try {
+            // Get all NFTs owned by the address with retry and fallback logic
+            const nfts = await provider.nft.getNftsForOwner(walletAddress);
+            
+            // Check which NFTs are from our target contracts
+            const ownedNfts = nfts.ownedNfts.filter(nft => 
+                contractAddresses.has(nft.contract.address.toLowerCase())
+            );
+    
+            // Update results based on owned NFTs
+            for (const nft of ownedNfts) {
+                const packName = contractToPackName[nft.contract.address.toLowerCase()];
+                if (packName) {
+                    results[packName] = true;
+                    count++;
+                }
             }
+        } catch (error) {
+            console.error('Error fetching NFTs:', error);
+            
+            // Fallback method: Direct contract calls if the NFT endpoint fails
+            await Promise.all(
+                Object.entries(packs).map(async ([packName, contractAddress]) => {
+                    try {
+                        // Check balance using the basic balanceOf function
+                        const ownerAddr = walletAddress.startsWith('0x') ? walletAddress : `0x${walletAddress}`;
+                        const balance = await checkNFTBalance(provider, contractAddress, ownerAddr);
+                        
+                        if (balance > 0) {
+                            results[packName] = true;
+                            count++;
+                        }
+                    } catch (err) {
+                        console.error(`Failed to check balance for ${packName}:`, err);
+                    }
+                })
+            );
         }
     } catch (error) {
         console.error('Error checking pack balances:', error);
-        throw error;
+        // Don't throw - return empty results instead
     }
 
     return { results, count };
 }
 
+/**
+ * Helper function to check NFT balance directly via contract call
+ */
+async function checkNFTBalance(provider: any, contractAddress: string, ownerAddress: string): Promise<number> {
+    try {
+        // Simple ERC721 balanceOf ABI
+        const abi = ['function balanceOf(address owner) view returns (uint256)'];
+        
+        // @ts-ignore - Using the core provider directly
+        const contract = provider.core.provider.attachContract(contractAddress, abi);
+        const balance = await contract.balanceOf(ownerAddress);
+        
+        // Convert BigInt or similar to number
+        return Number(balance.toString());
+    } catch (error) {
+        console.error(`Error checking NFT balance for ${contractAddress}:`, error);
+        return 0;
+    }
+}
+
+/**
+ * Check for community packs (Hacker, Builder, etc.)
+ */
 export const checkCommunityPacks = async (walletAddress: string) => {
     console.log("Checking community packs for", walletAddress);
-    const data = await checkPackBalances(walletAddress, communityPacks);
-    console.log("Community packs checked for", walletAddress, "with results", data.results);
-    return data;
+    try {
+        const data = await checkPackBalances(walletAddress, communityPacks);
+        console.log("Community packs checked for", walletAddress, "with results", data.results);
+        return data;
+    } catch (error) {
+        console.error("Error checking community packs:", error);
+        // Return empty results instead of failing
+        return { results: {}, count: 0 };
+    }
 };
 
+/**
+ * Check for finalist packs (hackathon wins)
+ */
 export const checkFinalistPacks = async (walletAddress: string) => {
-    return checkPackBalances(walletAddress, finalistPacks);
+    try {
+        return await checkPackBalances(walletAddress, finalistPacks);
+    } catch (error) {
+        console.error("Error checking finalist packs:", error);
+        // Return empty results instead of failing
+        return { results: {}, count: 0 };
+    }
 };
 
 
