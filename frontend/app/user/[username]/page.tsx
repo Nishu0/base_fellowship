@@ -419,7 +419,7 @@ console.log("userData",userData);
         uniqueUsers: 0
       };
     }
-    console.log("processOnchainData",processOnchainData);
+    console.log("processOnchainData", userData?.contractsDeployed);
 
     const transactions: any[] = [];
     const chainGroups: Record<string, {
@@ -470,10 +470,14 @@ console.log("userData",userData);
         tvl = contractsData.reduce((sum, contract) => sum + (parseFloat(contract.tvl || "0")), 0);
       }
       
-      // Count unique users
+      // Count unique users by directly summing the uniqueUsers field from each contract
       let uniqueUsers = 0;
       if (contractsData.length > 0) {
-        uniqueUsers = contractsData.reduce((sum, contract) => sum + (contract.uniqueUsers || 0), 0);
+        // Directly sum the uniqueUsers field from each contract
+        uniqueUsers = contractsData.reduce((sum, contract) => {
+          const userCount = typeof contract.uniqueUsers === 'number' ? contract.uniqueUsers : 0;
+          return sum + userCount;
+        }, 0);
       } else {
         // If no contract data, use unique transaction addresses as a proxy
         const uniqueAddresses = new Set();
@@ -542,7 +546,7 @@ console.log("userData",userData);
       testnet: data.testnet
     })) as ChainData[];
     
-    // Calculate total unique users
+    // Calculate total unique users - this is the sum of unique users across all chains
     const totalUniqueUsers = chains.reduce((sum, chain) => sum + chain.uniqueUsers, 0);
     
     // Find top chain by transaction count
