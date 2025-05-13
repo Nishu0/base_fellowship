@@ -206,8 +206,8 @@ export class FbiController {
     async checkProcessingStatus(req: Request, res: Response): Promise<void> {
         Logger.info('FbiController', 'checkProcessingStatus called', { params: req.params });
         try {
-            const { githubUsername } = req.params;
-
+            let { githubUsername } = req.params;
+            githubUsername = githubUsername.toLowerCase();
             const user = await prisma.user.findFirst({
                 where: { githubId: githubUsername },
                 include: {
