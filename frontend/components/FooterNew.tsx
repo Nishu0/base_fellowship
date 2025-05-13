@@ -16,7 +16,7 @@ export default function FooterNew() {
             <Link
               className="size-[52px] md:size-[60px] bg-white grid place-items-center border border-joule_gray-15 rounded-xl group -mt-5"
               target="_blank"
-              href="https://x.com/aiagentw"
+              href="https://x.com/0xklyro"
             >
             <svg xmlns="http://www.w3.org/2000/svg" className="size-8 transition-all md:size-8" width="35" height="35" viewBox="0 0 35 35" fill="none">
   <g clipPath="url(#clip0_8588_28065)">
@@ -38,9 +38,9 @@ export default function FooterNew() {
         </div>
         <div className="mt-[135px] flex flex-col md:flex-row justify-center w-full md:justify-between px-5 xl:px-0">
           <div className="flex gap-6 *:text-xs md:*:text-sm *:underline justify-center">
-            <Link href="/">Terms of use</Link>
+            <Link href="/terms">Terms of use</Link>
             {/* <Link href="/">Privacy Policy</Link> */}
-            <Link href="/">Media Kit</Link>
+            <Link href="/media-kit">Media Kit</Link>
             <Link href="/organizer/onboarding">Partner with us</Link>
           </div>
           <div className="text-center text-xs md:text-base mt-6 md:mt-0">

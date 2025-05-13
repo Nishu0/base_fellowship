@@ -27,6 +27,7 @@
     "d3": "^7.9.0",
     "framer-motion": "^12.9.4",
     "fumadocs-ui": "^15.2.12",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.503.0",
     "motion": "^12.9.2",
     "next": "15.3.1",
