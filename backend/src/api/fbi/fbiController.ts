@@ -21,9 +21,10 @@ export class FbiController {
         Logger.info('FbiController', 'analyzeUser called', { body: req.body });
         try {
             const request: AnalyzeUserRequest = {
-                githubUsername: req.body.githubUsername,
+                githubUsername: req.body.githubUsername.toLowerCase(),
                 addresses: req.body.addresses
             };
+
 
             // Resolve ENS names to addresses
             const resolvedAddresses = await Promise.all(

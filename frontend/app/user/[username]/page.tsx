@@ -212,7 +212,7 @@ export default function UserProfilePage() {
     if (typeof window !== 'undefined') {
       return window.location.href;
     }
-    return `https://fellowship.io/user/${username}`;
+    return `https://klyro.io/user/${username}`;
   };
   
   // Copy URL to clipboard
