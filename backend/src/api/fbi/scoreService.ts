@@ -146,7 +146,7 @@ export class ScoreService {
         });
 
         const hackathonData = onchainData?.hackathonData as any;
-        const totalWins = hackathonData.totalWins || 0;
+        const totalWins = hackathonData?.totalWins || 0;
 
         // Calculate hackathon score
         const hackathonScore = Math.min(totalWins / thresholds.hackathonWins, 1) * weights.hackathonWins;
