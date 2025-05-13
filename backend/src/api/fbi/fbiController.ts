@@ -264,4 +264,111 @@ export class FbiController {
             });
         }
     }
+
+    async createOrganization(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'createOrganization called', { body: req.body });
+        try {
+            const { name, description, logoUrl, website, contactEmail } = req.body;
+
+            // Validate required fields
+            if (!name) {
+                res.status(400).json({
+                    success: false,
+                    error: "Organization name is required"
+                });
+                return;
+            }
+
+            // Check if organization with same name already exists
+            const existingOrg = await prisma.organization.findUnique({
+                where: { name }
+            });
+
+            if (existingOrg) {
+                res.status(409).json({
+                    success: false,
+                    error: "Organization with this name already exists"
+                });
+                return;
+            }
+
+            // Create new organization
+            const organization = await prisma.organization.create({
+                data: {
+                    name,
+                    description,
+                    logoUrl,
+                    website,
+                    contactEmail
+                }
+            });
+
+            Logger.info('FbiController', 'Organization created successfully', { organizationId: organization.id });
+            res.status(201).json({
+                success: true,
+                data: organization
+            });
+        } catch (error) {
+            Logger.error('FbiController', 'Error in createOrganization', { error });
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
+
+    async getAllOrganizations(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'getAllOrganizations called');
+        try {
+            const organizations = await prisma.organization.findMany({
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
+
+            Logger.info('FbiController', 'Fetched all organizations', { count: organizations.length });
+            res.status(200).json({
+                success: true,
+                data: organizations
+            });
+        } catch (error) {
+            Logger.error('FbiController', 'Error in getAllOrganizations', { error });
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
+
+    async getOrganizationByName(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'getOrganizationByName called', { params: req.params });
+        try {
+            const { name } = req.params;
+
+            const organization = await prisma.organization.findUnique({
+                where: { name }
+            });
+
+            if (!organization) {
+                Logger.warn('FbiController', 'Organization not found', { name });
+                res.status(404).json({
+                    success: false,
+                    error: "Organization not found"
+                });
+                return;
+            }
+
+            Logger.info('FbiController', 'Organization found', { organizationId: organization.id });
+            res.status(200).json({
+                success: true,
+                data: organization
+            });
+        } catch (error) {
+            Logger.error('FbiController', 'Error in getOrganizationByName', { error });
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
 } 
