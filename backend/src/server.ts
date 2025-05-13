@@ -11,6 +11,7 @@ import requestLogger from "@/common/middleware/requestLogger";
 import { env } from "@/common/utils/envConfig";
 import fbiRouter from "./api/fbi/fbiRouter";
 import { registerAnalyzeWorkers } from "./api/fbi/queue";
+import { LoadKeys } from "./common/utils/getCreds";
 
 const logger = pino({ name: "server start" });
 const app: Express = express();
@@ -37,6 +38,12 @@ app.use(requestLogger);
 // Routes
 app.use("/health-check", healthCheckRouter);
 app.use("/fbi", fbiRouter);
+
+// Initialize the keys when the module is loaded
+LoadKeys().catch(error => {
+  console.error("Failed to load API keys:", error)
+  process.exit(1)
+})
 
 
 // Swagger UI

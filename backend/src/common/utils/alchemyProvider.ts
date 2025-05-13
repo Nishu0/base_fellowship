@@ -1,4 +1,5 @@
 import { Network, Alchemy, AlchemySettings } from 'alchemy-sdk';
+import { getNextAlchemyKey } from './getCreds';
 
 // Define fallback providers (you can add more alternatives here)
 const FALLBACK_RPC_ENDPOINTS: Record<string, string[]> = {
@@ -42,10 +43,10 @@ const consoleLogger = {
 /**
  * Creates an enhanced Alchemy provider with retries and fallbacks
  */
-export function createAlchemyProvider(
+export async function createAlchemyProvider(
   network: Network, 
   options: ProviderOptions = {}
-): Alchemy {
+): Promise<Alchemy> {
   const { 
     maxRetries = 5, 
     retryDelayMs = 1000, 
@@ -53,7 +54,7 @@ export function createAlchemyProvider(
     useFallbacks = true
   } = options;
   
-  const apiKey = process.env.ALCHEMY_API_KEY;
+  const apiKey = await getNextAlchemyKey();
   
   if (!apiKey) {
     consoleLogger.warn('ALCHEMY_API_KEY not found in environment variables');
@@ -151,9 +152,9 @@ async function tryFallbackProviders(networkKey: string, method: string, params: 
  */
 const providerCache = new Map<Network, Alchemy>();
 
-export function getAlchemyProvider(network: Network): Alchemy {
+export async function getAlchemyProvider(network: Network): Promise<Alchemy> {
   if (!providerCache.has(network)) {
-    providerCache.set(network, createAlchemyProvider(network));
+    providerCache.set(network, await createAlchemyProvider(network));
   }
   return providerCache.get(network)!;
 }

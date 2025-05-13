@@ -47,7 +47,7 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
 
     try {
         // Get our enhanced Alchemy provider for Optimism
-        const provider = getAlchemyProvider(Network.OPT_MAINNET);
+        const provider = await getAlchemyProvider(Network.OPT_MAINNET);
         
         // Create a Set of contract addresses for faster lookup
         const contractAddresses = new Set(Object.values(packs).map(addr => addr.toLowerCase()));

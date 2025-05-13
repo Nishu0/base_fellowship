@@ -38,15 +38,9 @@ const analyzeQueueJobProcessor = async (job: Job) => {
 
 export const registerAnalyzeWorkers = async () => {
     Logger.info('AnalyzeQueue', 'Registering worker for analyzeQueue');
-    analyzeQueue.registerWorker(analyzeQueueJobProcessor,
-        {
-            concurrency: 10,
-            connection: {
-                host: env.REDIS_HOST,
-                port: env.REDIS_PORT
-            }
-        }
-    )
+    analyzeQueue.registerWorker(analyzeQueueJobProcessor, {
+        concurrency: 5
+    })
 }
 
 

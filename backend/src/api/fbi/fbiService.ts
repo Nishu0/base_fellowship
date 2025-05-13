@@ -7,6 +7,7 @@ import { GitHubGraphQLHelper } from '@/common/utils/githubHelperGraphql';
 import { PrismaClient, DataStatus, User } from '@prisma/client';
 import { ScoreService } from './scoreService';
 import { Logger } from '@/common/utils/logger';
+import { getNextAlchemyKey, getNextGithubToken } from '@/common/utils/getCreds';
 
 const prisma = new PrismaClient();
 const scoreService = new ScoreService();
@@ -137,8 +138,11 @@ export class FbiService {
                 }
             });
 
-            const githubHelper = new GitHubHelper(env.GITHUB_ACCESS_TOKEN);
-            const githubGraphHelper = new GitHubGraphQLHelper(env.GITHUB_ACCESS_TOKEN);
+
+            const githubAccessToken = await getNextGithubToken()
+
+            const githubHelper = new GitHubHelper(githubAccessToken);
+            const githubGraphHelper = new GitHubGraphQLHelper(githubAccessToken);
 
             Logger.info('FbiService', `Fetching GitHub user data for: ${githubUsername}`);
             const userData = await githubHelper.fetchUser(githubUsername);
@@ -228,6 +232,7 @@ export class FbiService {
     private async extractOnchainData(request: AnalyzeUserRequest, user: User): Promise<void> {
         try {
             Logger.info('FbiService', `Starting extractOnchainData for userId: ${user.id}`);
+            const alchemyApiKey = await getNextAlchemyKey()
             // Get platform configuration
             const platformConfig = await prisma.platformConfig.findUnique({
                 where: { name: "default" }
@@ -276,7 +281,7 @@ export class FbiService {
                 enabledChains.map(async (chain) => {
                     try {
                         Logger.info('FbiService', `Processing chain: ${chain} for userId: ${user.id}`);
-                        const onchainDataManager = new OnchainDataManager(env.ALCHEMY_API_KEY, chain);
+                        const onchainDataManager = new OnchainDataManager(alchemyApiKey, chain);
                         
                         // Get contracts for this chain
                         let chainContracts: any = [];
