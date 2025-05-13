@@ -36,19 +36,17 @@ export default function Header() {
         </Badge>
 
         <div className="space-y-4">
-          <h1 className="font-serif text-6xl font-bold italic tracking-tight md:text-7xl lg:text-8xl text-white">Klyro</h1>
-          <p className="text-xl text-zinc-400 md:text-2xl">/ Find Builders Intelligently /</p>
+          <h1 className="font-serif text-6xl font-bold italic tracking-tight md:text-7xl lg:text-8xl text-white">Discover Talent backed by Proof of Work.</h1>
         </div>
 
         <p className="max-w-[600px] text-zinc-400 text-lg">
-          The ultimate platform for hackathon organizers to discover and evaluate top blockchain talent based on
-          verifiable onchain credentials and contributions.
+          Find real builders through verifiable onchain and offchain moves, no resumes, no guestwork.
         </p>
 
         <div className="flex flex-wrap gap-4 justify-center pt-4">
           <Link href="/form">
             <Button className="rounded-full bg-white text-black hover:bg-zinc-200 px-8 py-6 text-lg font-medium">
-              Check Your Profile
+              Create Profile
             </Button>
           </Link>
           <PartnerWithUs 
@@ -56,7 +54,7 @@ export default function Header() {
             variant="outline" 
             className="rounded-full border-indigo-600 text-indigo-400 hover:bg-indigo-950/50 px-8 py-6 text-lg font-medium"
           >
-            Partner with us
+            Partner as Community
           </PartnerWithUs>
         </div>
       </div>

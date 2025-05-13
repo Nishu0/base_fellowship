@@ -6,16 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle } from "lucide-react";
+import { api } from "@/lib/axiosClient";
 
 export default function OrganizerOnboarding() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    logo: "",
+    logoUrl: "",
     website: "",
-    contact: ""
+    contactEmail: ""
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -26,14 +28,19 @@ export default function OrganizerOnboarding() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     
-    // Simulate API call
-    setTimeout(() => {
-      // Normally would save to backend here
-      console.log("Organization created:", formData);
-      setLoading(false);
+    try {
+      // Make POST request to create organization
+      const response = await api.post("/fbi/organizations", formData);
+      console.log("Organization created:", response.data);
       setSubmitted(true);
-    }, 1000);
+    } catch (err) {
+      console.error("Error creating organization:", err);
+      setError("Failed to create organization. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -51,7 +58,7 @@ export default function OrganizerOnboarding() {
               Thank you for submitting your organization information.
             </p>
             <p className="text-zinc-400 mb-6">
-              Your application is now pending background verification. Our team will review your information and contact you at {formData.contact} with next steps.
+              Your application is now pending background verification. Our team will review your information and contact you at {formData.contactEmail} with next steps.
             </p>
             <div className="bg-zinc-900/50 rounded-lg p-4 text-left mb-6 border border-zinc-800">
               <h3 className="font-medium mb-2 text-zinc-300">What happens next?</h3>
@@ -85,6 +92,12 @@ export default function OrganizerOnboarding() {
             </p>
           </div>
           
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/20 border border-red-900/50 rounded-md text-red-300 text-sm">
+              {error}
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Organization Name</Label>
@@ -113,11 +126,11 @@ export default function OrganizerOnboarding() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="logo">Logo URL</Label>
+              <Label htmlFor="logoUrl">Logo URL</Label>
               <Input
-                id="logo"
-                name="logo"
-                value={formData.logo}
+                id="logoUrl"
+                name="logoUrl"
+                value={formData.logoUrl}
                 onChange={handleChange}
                 placeholder="https://yourwebsite.com/logo.png"
                 className="bg-zinc-900 border-zinc-800"
@@ -140,12 +153,12 @@ export default function OrganizerOnboarding() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="contact">Contact Email</Label>
+              <Label htmlFor="contactEmail">Contact Email</Label>
               <Input
-                id="contact"
-                name="contact"
+                id="contactEmail"
+                name="contactEmail"
                 type="email"
-                value={formData.contact}
+                value={formData.contactEmail}
                 onChange={handleChange}
                 placeholder="admin@fellowship.xyz"
                 required

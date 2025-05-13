@@ -1,7 +1,7 @@
 export const siteConfig = {
-    name: "Klyro",
+    name: "Klyro: Discover Talent backed by Proof of Work",
     description:
-      "Klyro: Helping you find the best builders with Real and Verifiable Data",
+      "Find blockchain talent through verifiable onchain and offchain work — no resumes, no guesswork.",
     ogImage: "https://res.cloudinary.com/dyk5s8gbw/image/upload/v1747118059/ulwgqscwexlufntijzk1.png",
     twitter: "https://x.com/",
     github: "",

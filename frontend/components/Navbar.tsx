@@ -90,7 +90,7 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 <PlusCircle className="h-4 w-4" />
-                Partner with us
+                Partner as Community
               </Link>
             </li>
             <li>
