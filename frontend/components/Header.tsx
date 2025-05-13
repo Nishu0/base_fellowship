@@ -3,6 +3,7 @@ import { AnimatedGridPattern } from "./grid";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link"
+import { PartnerWithUs } from "./PartnerWithUs";
 
 
 export default function Header() {
@@ -50,6 +51,13 @@ export default function Header() {
               Create Builder Profile
             </Button>
           </Link>
+          <PartnerWithUs 
+            asLink={true}
+            variant="outline" 
+            className="rounded-full border-indigo-600 text-indigo-400 hover:bg-indigo-950/50 px-8 py-6 text-lg font-medium"
+          >
+            Partner with us
+          </PartnerWithUs>
         </div>
       </div>
 

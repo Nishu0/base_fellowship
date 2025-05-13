@@ -51,6 +51,7 @@ export default function FooterNew() {
             {/* <Link href="/">Privacy Policy</Link> */}
             <Link href="/">Media Kit</Link>
             <Link href="/">Docs</Link>
+            <Link href="/organizer/onboarding">Partner with us</Link>
           </div>
           <div className="text-center text-xs md:text-base mt-6 md:mt-0">
             © 2025 Klyro. All rights reserved.

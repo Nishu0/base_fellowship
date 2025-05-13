@@ -4,7 +4,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useTheme } from "next-themes";
-import { Github, User } from "lucide-react";
+import { Github, User, PlusCircle } from "lucide-react";
+import { PartnerWithUs } from "./PartnerWithUs";
+
 export default function Navbar() {
   const { theme, setTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,9 +33,15 @@ export default function Navbar() {
         
         {/* Right side elements */}
         <div className="flex flex-row items-center justify-end gap-4 flex-1">
-          <Link href="/form" className="inline-flex items-center gap-2.5 font-semibold">
-            <p className="text-xl">Partner with us</p>
-          </Link>
+          <PartnerWithUs 
+            asLink={true} 
+            variant="outline"
+            size="sm"
+            className="px-4 py-1.5 text-sm font-medium rounded-full border-indigo-600/70 text-indigo-400 hover:bg-indigo-950/30 hover:text-indigo-300 hover:border-indigo-500 transition-all duration-200 flex items-center gap-1.5"
+          >
+            <PlusCircle className="h-3.5 w-3.5" />
+            Partner with us
+          </PartnerWithUs>
         </div>
         
         {/* Mobile Menu */}
@@ -77,19 +85,21 @@ export default function Navbar() {
           <ul className="space-y-2">
             <li>
               <Link 
-                href="/form" 
-                className="block p-2 text-sm hover:text-indigo-500"
+                href="/organizer/onboarding" 
+                className="flex items-center gap-2 p-2 text-sm hover:text-indigo-500"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Become an org
+                <PlusCircle className="h-4 w-4" />
+                Partner with us
               </Link>
             </li>
             <li>
               <Link 
                 href="/user" 
-                className="block p-2 text-sm hover:text-indigo-500"
+                className="flex items-center gap-2 p-2 text-sm hover:text-indigo-500"
                 onClick={() => setIsMenuOpen(false)}
               >
+                <User className="h-4 w-4" />
                 Profile
               </Link>
             </li>

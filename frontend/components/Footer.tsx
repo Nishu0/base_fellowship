@@ -62,6 +62,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/organizer/onboarding" className="text-zinc-400 hover:text-white transition-colors inline-flex items-center">
+                  Partner with us
+                  <ArrowUpRight className="ml-1 h-3 w-3" />
+                </Link>
+              </li>
+              <li>
                 <Link href="/" className="text-zinc-400 hover:text-white transition-colors inline-flex items-center">
                   Documentation
                   <ArrowUpRight className="ml-1 h-3 w-3" />
