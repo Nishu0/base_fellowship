@@ -116,17 +116,36 @@ export class ScoreService {
                 create: {
                     userId,
                     totalScore,
-                    metrics
+                    metrics,
+                    status: DataStatus.COMPLETED,
+                    lastCalculatedAt: new Date()
                 },
                 update: {
                     totalScore,
-                    metrics
+                    metrics,
+                    status: DataStatus.COMPLETED,
+                    lastCalculatedAt: new Date()
                 }
             });
 
             Logger.info('ScoreService', 'Successfully calculated user score', { userId });
         } catch (error) {
             Logger.error('ScoreService', 'Error calculating user score', error);
+            // Update status to failed if any error occurs
+            await prisma.userScore.upsert({
+                where: { userId },
+                create: {
+                    userId,
+                    totalScore: 0,
+                    metrics: {},
+                    status: DataStatus.FAILED,
+                    lastCalculatedAt: new Date()
+                },
+                update: {
+                    status: DataStatus.FAILED,
+                    lastCalculatedAt: new Date()
+                }
+            });
             throw error;
         }
     }

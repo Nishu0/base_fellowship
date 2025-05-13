@@ -4,8 +4,8 @@ import { checkCommunityPacks, checkFinalistPacks } from './ethglobalCred';
 export class OnchainDataManager {
     private alchemy: Alchemy;
     private network: Network;
-    private readonly MAX_RETRIES = 3;
-    private readonly INITIAL_DELAY = 1000; // 1 second
+    private readonly MAX_RETRIES = 10;
+    private readonly INITIAL_DELAY = 3000; // 3 second
 
     constructor(apiKey: string, network: Network = Network.ETH_MAINNET) {
         this.network = network;

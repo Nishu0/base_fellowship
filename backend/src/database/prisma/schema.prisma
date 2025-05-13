@@ -82,6 +82,8 @@ model UserScore {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   totalScore Float @default(0)
   metrics Json // Stores individual metric scores and calculations
+  status DataStatus @default(PENDING)
+  lastCalculatedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

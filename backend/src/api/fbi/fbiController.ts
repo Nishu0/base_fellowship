@@ -91,7 +91,12 @@ export class FbiController {
             const isDataRecent = user.lastFetchedAt && 
                 (Date.now() - user.lastFetchedAt.getTime()) < 24 * 60 * 60 * 1000;
 
-            if (isDataRecent && user.dataStatus === DataStatus.COMPLETED) {
+            const isAllDataCompleted = user.dataStatus === DataStatus.COMPLETED &&
+                user.githubData?.status === DataStatus.COMPLETED &&
+                user.contractsData?.status === DataStatus.COMPLETED &&
+                user.onchainData?.status === DataStatus.COMPLETED;
+
+            if (isDataRecent && isAllDataCompleted) {
                 Logger.info('FbiController', 'Returning cached user data', { githubUsername: request.githubUsername });
                 res.status(200).json({
                     success: true,
