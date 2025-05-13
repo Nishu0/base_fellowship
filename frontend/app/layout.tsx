@@ -5,6 +5,8 @@ import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { siteConfig } from "@/site";
 import ContactModal from "@/components/Contact";
+import { Analytics } from "@vercel/analytics/next"
+import { PostHogProvider } from "@/providers/posthog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -80,7 +82,10 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <Navbar />
-          {children}
+          <PostHogProvider>
+            {children}
+          </PostHogProvider>
+          <Analytics/>
         </ThemeProvider>
       </body>
     </html>
