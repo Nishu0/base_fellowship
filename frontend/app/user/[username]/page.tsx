@@ -184,6 +184,18 @@ export default function UserProfilePage() {
         web3Worth: number;
       };
     };
+    hackathonData?: {
+      WINS: {
+        count: number;
+        packs: Record<string, boolean>;
+      };
+      HACKER: {
+        count: number;
+        packs: Record<string, boolean>;
+      };
+      totalWins: number;
+      totalHacker: number;
+    };
   }
 
   const [userData, setUserData] = useState<GitHubUserData | null>(null);
@@ -1022,6 +1034,13 @@ console.log("userData",userData);
                   Chains
                 </Button>
                 <Button 
+                  variant={activeTab === "hackathon" ? "default" : "ghost"} 
+                  onClick={() => setActiveTab("hackathon")}
+                  className={`rounded-full px-6 ${activeTab === "hackathon" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
+                >
+                  Hackathon
+                </Button>
+                <Button 
                   variant={activeTab === "skills" ? "default" : "ghost"} 
                   onClick={() => setActiveTab("skills")}
                   className={`rounded-full px-6 ${activeTab === "skills" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
@@ -1493,6 +1512,213 @@ console.log("userData",userData);
                     <div className="text-center py-8 text-zinc-500">
                       <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p>No blockchain activity data available</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "hackathon" && (
+                <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Hackathon Achievements</h2>
+                    {userData?.hackathonData && (userData.hackathonData.totalWins > 0 || userData.hackathonData.totalHacker > 0) && (
+                      <Badge className="bg-purple-900/70 text-purple-300 border-purple-700">
+                        ETHGlobal Hacker
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {userData?.hackathonData ? (
+                    <div className="space-y-6">
+                      {/* Packs Section */}
+                      <div>
+                        <h3 className="text-md font-medium text-zinc-200 mb-4">ETHGlobal Packs</h3>
+                        {userData.hackathonData.HACKER.count > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Hacker Pack */}
+                            {userData.hackathonData.HACKER.packs["Hacker Pack"] && (
+                              <a 
+                                href="https://ethglobal.com/packs/hacker" 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-400" />
+                                  </div>
+                                  <h4 className="text-lg font-medium">Hacker Pack</h4>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-3">
+                                  A pack exclusive for ETHGlobal hackers with access to Faucets and developer perks
+                                </p>
+                                <div className="flex items-center text-xs text-purple-400">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View on ETHGlobal
+                                </div>
+                              </a>
+                            )}
+                            
+                            {/* Builder Pack */}
+                            {userData.hackathonData.HACKER.packs["Builder Pack"] && (
+                              <a 
+                                href="https://ethglobal.com/packs/builder" 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-400" />
+                                  </div>
+                                  <h4 className="text-lg font-medium">Builder Pack</h4>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-3">
+                                  A pack exclusive for seasoned ETHGlobal hackers with access to more onchain perks
+                                </p>
+                                <div className="flex items-center text-xs text-purple-400">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View on ETHGlobal
+                                </div>
+                              </a>
+                            )}
+                            
+                            {/* Pioneer Pack */}
+                            {userData.hackathonData.HACKER.packs["Pioneer Pack"] && (
+                              <a 
+                                href="https://ethglobal.com/packs/pioneer" 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-400" />
+                                  </div>
+                                  <h4 className="text-lg font-medium">Pioneer Pack</h4>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-3">
+                                  A Pack for highly experienced ETHGlobal hackers with tons of perks and rewards
+                                </p>
+                                <div className="flex items-center text-xs text-purple-400">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View on ETHGlobal
+                                </div>
+                              </a>
+                            )}
+                            
+                            {/* Supporter Pack */}
+                            {userData.hackathonData.HACKER.packs["Supporter Pack"] && (
+                              <a 
+                                href="https://ethglobal.com/packs/supporter" 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-400" />
+                                  </div>
+                                  <h4 className="text-lg font-medium">Supporter Pack</h4>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-3">
+                                  A Pack for supporters of ETHGlobal events, especially mentors and volunteers
+                                </p>
+                                <div className="flex items-center text-xs text-purple-400">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View on ETHGlobal
+                                </div>
+                              </a>
+                            )}
+                            
+                            {/* Partner Pack */}
+                            {userData.hackathonData.HACKER.packs["Partner Pack"] && (
+                              <a 
+                                href="https://ethglobal.com/packs/partner" 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-400" />
+                                  </div>
+                                  <h4 className="text-lg font-medium">Partner Pack</h4>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-3">
+                                  A Pack for partners of ETHGlobal events who attend on behalf of supporting companies
+                                </p>
+                                <div className="flex items-center text-xs text-purple-400">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View on ETHGlobal
+                                </div>
+                              </a>
+                            )}
+                            
+                            {/* OG Pack */}
+                            {userData.hackathonData.HACKER.packs["OG Pack"] && (
+                              <a 
+                                href="https://ethglobal.com/packs/og" 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-400" />
+                                  </div>
+                                  <h4 className="text-lg font-medium">OG Pack</h4>
+                                </div>
+                                <p className="text-sm text-zinc-400 mb-3">
+                                  A Pack for OG members of the ETHGlobal community, especially judges and speakers
+                                </p>
+                                <div className="flex items-center text-xs text-purple-400">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View on ETHGlobal
+                                </div>
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
+                            <Trophy className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
+                            <p className="text-zinc-500">No packs found. Try with a different address.</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Wins Section */}
+                      <div>
+                        <h3 className="text-md font-medium text-zinc-200 mb-4">ETHGlobal Hackathon Finalists</h3>
+                        {userData.hackathonData.WINS.count > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {Object.keys(userData.hackathonData.WINS.packs).map((hackathon) => (
+                              <div 
+                                key={hackathon}
+                                className="bg-zinc-900/70 rounded-lg p-3 border border-zinc-800/50"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="h-4 w-4 text-yellow-500" />
+                                  <span className="font-medium text-sm">{hackathon}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
+                            <Trophy className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
+                            <p className="text-zinc-500">No hackathon finalists yet. Keep building!</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-zinc-900/50 rounded-xl p-8 text-center">
+                      <Trophy className="w-16 h-16 mx-auto text-zinc-700 mb-4" />
+                      <h3 className="text-xl font-medium text-zinc-400 mb-2">No Hackathon Data</h3>
+                      <p className="text-zinc-500 max-w-md mx-auto">
+                        No ETHGlobal hackathon data found for this user. Try connecting your ETHGlobal wallet to display your achievements.
+                      </p>
                     </div>
                   )}
                 </div>
