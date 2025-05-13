@@ -8,29 +8,29 @@ const defaultConfig = {
     description: "Default platform configuration",
     thresholds: {
         // Web3 thresholds
-        mainnetContracts: 40,
-        testnetContracts: 100,
-        mainnetTVL: 10000, // 10K
+        mainnetContracts: 5,
+        testnetContracts: 20,
+        mainnetTVL: 1000, // 1000
         uniqueUsers: 100,
         transactions: 3000,
-        web3Languages: 246639660,
-        cryptoRepoContributions: 50,
-        hackathonWins: 10,
+        web3Languages: 10000000,
+        cryptoRepoContributions: 5,
+        hackathonWins: 5,
 
         // Web2 thresholds
-        prs: 100,
+        prs: 50,
         contributions: 10634,
-        forks: 56488,
-        stars: 196965,
+        forks: 500,
+        stars: 500,
         issues: 10,
-        totalLinesOfCode: 2466396600,
+        totalLinesOfCode: 146639660,
         accountAge: 4998, //  year in days
-        followers: 234058
+        followers: 500
     },
     weights: {
         // Web3 weights
-        mainnetContracts: 12,
-        testnetContracts: 8,
+        mainnetContracts: 11,
+        testnetContracts: 9,
         mainnetTVL: 5,
         uniqueUsers: 5,
         transactions: 20,
@@ -58,10 +58,10 @@ const defaultConfig = {
                 cryptoRepoContribution: 200 // Reduced from 1000
             },
             skill: {
-                solidity: 0.02,           // Reduced from 0.1
-                rust: 0.03,              // Reduced from 0.15
-                move: 0.025,             // Reduced from 0.12
-                cadence: 0.025           // Reduced from 0.12
+                solidity: 0.000002,           // Reduced from 0.1
+                rust: 0.00003,              // Reduced from 0.15
+                move: 0.00025,             // Reduced from 0.12
+                cadence: 0.00025           // Reduced from 0.12
             },
             influence: {
                 tvlMultiplier: 0.0001,    // Reduced from 0.001
@@ -77,7 +77,7 @@ const defaultConfig = {
                 contribution: 10          // Reduced from 50
             },
             skill: {
-                lineOfCode: 0.00001       // Reduced from 0.05
+                lineOfCode: 0.0000000001       // Reduced from 0.05
             },
             influence: {
                 star: 20,                 // Reduced from 100

@@ -155,7 +155,7 @@ export default function UserProfilePage() {
                 {/* Onchain Score */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-zinc-400">Onchain Score</span>
+                    <span className="text-zinc-400">Web3 Score</span>
                     <span className="font-medium">{user.scores.onchain}/100</span>
                   </div>
                   <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
