@@ -546,51 +546,59 @@ export class ScoreService {
 
             if (!user) throw new Error("User not found");
 
-            // Initialize worth components
-            const worth = {
-                totalWorth: 0,
-                breakdown: {
-                    web3Worth: 0,
-                    web2Worth: 0
-                },
-                details: {
-                    experienceValue: 0,
-                    influenceValue: 0,
-                    skillValue: 0
-                }
-            };
-
             // Calculate Web3 Worth (60% of total)
             const web3Worth = await this.calculateWeb3DeveloperWorth(user);
-            worth.breakdown.web3Worth = web3Worth.totalWorth;
-            worth.details.experienceValue += web3Worth.web3Metrics.experienceValue;
-            worth.details.skillValue += web3Worth.web3Metrics.skillValue;
-            worth.details.influenceValue += web3Worth.web3Metrics.influenceValue;
-
+            
             // Calculate Web2 Worth (40% of total)
             const web2Worth = await this.calculateWeb2DeveloperWorth(user);
-            worth.breakdown.web2Worth = web2Worth.totalWorth;
-            worth.details.experienceValue += web2Worth.web2Metrics.experienceValue;
-            worth.details.skillValue += web2Worth.web2Metrics.skillValue;
-            worth.details.influenceValue += web2Worth.web2Metrics.influenceValue;
 
             // Calculate total worth
-            worth.totalWorth = worth.breakdown.web3Worth + worth.breakdown.web2Worth;
+            const totalWorth = web3Worth.totalWorth + web2Worth.totalWorth;
+
+            // Store detailed metrics
+            const detailedMetrics = {
+                web3: {
+                    mainnetContracts: web3Worth.web3Metrics.experienceBreakdown.mainnetContracts,
+                    testnetContracts: web3Worth.web3Metrics.experienceBreakdown.testnetContracts,
+                    cryptoRepoContributions: web3Worth.web3Metrics.experienceBreakdown.cryptoRepoContributions,
+                    languages: {
+                        solidity: web3Worth.web3Metrics.skillBreakdown.solidity,
+                        rust: web3Worth.web3Metrics.skillBreakdown.rust,
+                        move: web3Worth.web3Metrics.skillBreakdown.move,
+                        cadence: web3Worth.web3Metrics.skillBreakdown.cadence
+                    },
+                    tvl: web3Worth.web3Metrics.influenceBreakdown.tvl,
+                    uniqueUsers: web3Worth.web3Metrics.influenceBreakdown.uniqueUsers,
+                    transactions: web3Worth.web3Metrics.influenceBreakdown.transactions,
+                    totalWorth: web3Worth.totalWorth
+                },
+                web2: {
+                    accountAge: web2Worth.web2Metrics.experienceBreakdown.accountAge,
+                    prs: web2Worth.web2Metrics.experienceBreakdown.prs,
+                    contributions: web2Worth.web2Metrics.experienceBreakdown.contributions,
+                    linesOfCode: web2Worth.web2Metrics.skillBreakdown.linesOfCode,
+                    stars: web2Worth.web2Metrics.influenceBreakdown.stars,
+                    forks: web2Worth.web2Metrics.influenceBreakdown.forks,
+                    followers: web2Worth.web2Metrics.influenceBreakdown.followers,
+                    totalWorth: web2Worth.totalWorth
+                },
+                totalWorth
+            };
 
             // Update or create developer worth in database
             await prisma.developerWorth.upsert({
                 where: { userId },
                 create: {
                     userId,
-                    totalWorth: worth.totalWorth,
-                    breakdown: worth.breakdown,
-                    details: worth.details,
+                    totalWorth,
+                    breakdown: detailedMetrics,
+                    details: detailedMetrics, // Store full details here
                     lastCalculatedAt: new Date()
                 },
                 update: {
-                    totalWorth: worth.totalWorth,
-                    breakdown: worth.breakdown,
-                    details: worth.details,
+                    totalWorth,
+                    breakdown: detailedMetrics,
+                    details: detailedMetrics, // Store full details here
                     lastCalculatedAt: new Date()
                 }
             });
@@ -606,8 +614,65 @@ export class ScoreService {
         let totalWorth = 0;
         const web3Metrics = {
             experienceValue: 0,
+            experienceBreakdown: {
+                mainnetContracts: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                testnetContracts: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                cryptoRepoContributions: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0,
+                    details: {} as Record<string, number>
+                }
+            },
             skillValue: 0,
-            influenceValue: 0
+            skillBreakdown: {
+                solidity: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                rust: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                move: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                cadence: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                }
+            },
+            influenceValue: 0,
+            influenceBreakdown: {
+                tvl: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                uniqueUsers: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                transactions: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                }
+            }
         };
 
         // Get platform configuration
@@ -643,50 +708,94 @@ export class ScoreService {
             }
         };
 
-        // 1. Experience Value (30% of Web3 worth)
+        // 1. Experience Value
         const contractStats = user.onchainData?.contractStats as any;
         const mainnetContracts = contractStats?.total?.mainnet || 0;
         const testnetContracts = contractStats?.total?.testnet || 0;
         
-        web3Metrics.experienceValue = (mainnetContracts * multipliers.experience.mainnetContract) + 
-                                    (testnetContracts * multipliers.experience.testnetContract);
+        // Store mainnet contracts details
+        web3Metrics.experienceBreakdown.mainnetContracts = {
+            value: mainnetContracts,
+            multiplier: multipliers.experience.mainnetContract,
+            worth: mainnetContracts * multipliers.experience.mainnetContract
+        };
+
+        // Store testnet contracts details
+        web3Metrics.experienceBreakdown.testnetContracts = {
+            value: testnetContracts,
+            multiplier: multipliers.experience.testnetContract,
+            worth: testnetContracts * multipliers.experience.testnetContract
+        };
 
         // Add crypto repo contributions
         const githubData = user.githubData;
         if (githubData) {
-            const repos = githubData.repos as any;
+            const repos = githubData.languagesData as any;
             const contributions = repos.repoContributions || {};
             
             let totalCryptoContributions = 0;
             const cryptoRepos = await this.getCryptoRepos();
+            const contributionDetails: Record<string, number> = {};
             
             cryptoRepos.forEach(repo => {
-                totalCryptoContributions += contributions[repo] || 0;
+                const contribution = contributions[repo] || 0;
+                if (contribution > 0) {
+                    contributionDetails[repo] = contribution;
+                    totalCryptoContributions += contribution;
+                }
             });
-            web3Metrics.experienceValue += totalCryptoContributions * multipliers.experience.cryptoRepoContribution;
+
+            web3Metrics.experienceBreakdown.cryptoRepoContributions = {
+                value: totalCryptoContributions,
+                multiplier: multipliers.experience.cryptoRepoContribution,
+                worth: totalCryptoContributions * multipliers.experience.cryptoRepoContribution,
+                details: contributionDetails
+            };
         }
 
-        // 2. Skill Value (40% of Web3 worth)
+        web3Metrics.experienceValue = 
+            web3Metrics.experienceBreakdown.mainnetContracts.worth +
+            web3Metrics.experienceBreakdown.testnetContracts.worth +
+            web3Metrics.experienceBreakdown.cryptoRepoContributions.worth;
+
+        // 2. Skill Value
         if (githubData) {
             const repos = githubData.repos as any;
             const languages = repos.totalLanguageLinesOfCode || {};
             
-            const web3Languages = {
-                Solidity: languages.Solidity || 0,
-                Rust: languages.Rust || 0,
-                Move: languages.Move || 0,
-                Cadence: languages.Cadence || 0
+            // Store individual language details
+            web3Metrics.skillBreakdown.solidity = {
+                value: languages.Solidity || 0,
+                multiplier: multipliers.skill.solidity,
+                worth: (languages.Solidity || 0) * multipliers.skill.solidity
             };
 
-            web3Metrics.skillValue = (
-                (web3Languages.Solidity * multipliers.skill.solidity) +
-                (web3Languages.Rust * multipliers.skill.rust) +
-                (web3Languages.Move * multipliers.skill.move) +
-                (web3Languages.Cadence * multipliers.skill.cadence)
-            );
+            web3Metrics.skillBreakdown.rust = {
+                value: languages.Rust || 0,
+                multiplier: multipliers.skill.rust,
+                worth: (languages.Rust || 0) * multipliers.skill.rust
+            };
+
+            web3Metrics.skillBreakdown.move = {
+                value: languages.Move || 0,
+                multiplier: multipliers.skill.move,
+                worth: (languages.Move || 0) * multipliers.skill.move
+            };
+
+            web3Metrics.skillBreakdown.cadence = {
+                value: languages.Cadence || 0,
+                multiplier: multipliers.skill.cadence,
+                worth: (languages.Cadence || 0) * multipliers.skill.cadence
+            };
+
+            web3Metrics.skillValue = 
+                web3Metrics.skillBreakdown.solidity.worth +
+                web3Metrics.skillBreakdown.rust.worth +
+                web3Metrics.skillBreakdown.move.worth +
+                web3Metrics.skillBreakdown.cadence.worth;
         }
 
-        // 3. Influence Value (30% of Web3 worth)
+        // 3. Influence Value
         const contracts = user.contractsData?.contracts as any;
         let totalTVL = 0;
         let uniqueUsers = new Set();
@@ -702,9 +811,29 @@ export class ScoreService {
         const mainnetStats = transactionStats?.total?.mainnet || {};
         const totalTxs = (mainnetStats.external || 0) + (mainnetStats.internal || 0);
 
-        web3Metrics.influenceValue = (totalTVL * multipliers.influence.tvlMultiplier) + 
-                                   (uniqueUsers.size * multipliers.influence.uniqueUser) + 
-                                   (totalTxs * multipliers.influence.transaction);
+        // Store influence metrics details
+        web3Metrics.influenceBreakdown.tvl = {
+            value: totalTVL,
+            multiplier: multipliers.influence.tvlMultiplier,
+            worth: totalTVL * multipliers.influence.tvlMultiplier
+        };
+
+        web3Metrics.influenceBreakdown.uniqueUsers = {
+            value: uniqueUsers.size,
+            multiplier: multipliers.influence.uniqueUser,
+            worth: uniqueUsers.size * multipliers.influence.uniqueUser
+        };
+
+        web3Metrics.influenceBreakdown.transactions = {
+            value: totalTxs,
+            multiplier: multipliers.influence.transaction,
+            worth: totalTxs * multipliers.influence.transaction
+        };
+
+        web3Metrics.influenceValue = 
+            web3Metrics.influenceBreakdown.tvl.worth +
+            web3Metrics.influenceBreakdown.uniqueUsers.worth +
+            web3Metrics.influenceBreakdown.transactions.worth;
 
         // Calculate total Web3 worth
         totalWorth = web3Metrics.experienceValue + web3Metrics.skillValue + web3Metrics.influenceValue;
@@ -716,8 +845,50 @@ export class ScoreService {
         let totalWorth = 0;
         const web2Metrics = {
             experienceValue: 0,
+            experienceBreakdown: {
+                accountAge: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                prs: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                contributions: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                }
+            },
             skillValue: 0,
-            influenceValue: 0
+            skillBreakdown: {
+                linesOfCode: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0,
+                    breakdown: {} as Record<string, number>
+                }
+            },
+            influenceValue: 0,
+            influenceBreakdown: {
+                stars: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                forks: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                },
+                followers: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0
+                }
+            }
         };
 
         // Get platform configuration
@@ -755,29 +926,76 @@ export class ScoreService {
             const userInfo = githubData.userInfo as any;
             const repos = githubData.repos as any;
 
-            // 1. Experience Value (30% of Web2 worth)
+            // 1. Experience Value
             const accountAge = userInfo.accountAge || 0;
             const totalPRs = githubData.languagesData.totalPRs || 0;
             const totalContributions = githubData.languagesData.totalContributions || 0;
 
-            web2Metrics.experienceValue = (accountAge * multipliers.experience.accountAge) + 
-                                        (totalPRs * multipliers.experience.pr) + 
-                                        (totalContributions * multipliers.experience.contribution);
+            // Store experience metrics details
+            web2Metrics.experienceBreakdown.accountAge = {
+                value: accountAge,
+                multiplier: multipliers.experience.accountAge,
+                worth: accountAge * multipliers.experience.accountAge
+            };
 
-            // 2. Skill Value (40% of Web2 worth)
+            web2Metrics.experienceBreakdown.prs = {
+                value: totalPRs,
+                multiplier: multipliers.experience.pr,
+                worth: totalPRs * multipliers.experience.pr
+            };
+
+            web2Metrics.experienceBreakdown.contributions = {
+                value: totalContributions,
+                multiplier: multipliers.experience.contribution,
+                worth: totalContributions * multipliers.experience.contribution
+            };
+
+            web2Metrics.experienceValue = 
+                web2Metrics.experienceBreakdown.accountAge.worth +
+                web2Metrics.experienceBreakdown.prs.worth +
+                web2Metrics.experienceBreakdown.contributions.worth;
+
+            // 2. Skill Value
             const languages = repos.totalLanguageLinesOfCode || {};
             const totalLOC = Object.values(languages).reduce((a: number, b: any) => a + (Number(b) || 0), 0);
             
-            web2Metrics.skillValue = totalLOC * multipliers.skill.lineOfCode;
+            web2Metrics.skillBreakdown.linesOfCode = {
+                value: totalLOC,
+                multiplier: multipliers.skill.lineOfCode,
+                worth: totalLOC * multipliers.skill.lineOfCode,
+                breakdown: languages
+            };
 
-            // 3. Influence Value (30% of Web2 worth)
+            web2Metrics.skillValue = web2Metrics.skillBreakdown.linesOfCode.worth;
+
+            // 3. Influence Value
             const totalStars = repos.totalStars || 0;
             const totalForks = repos.totalForks || 0;
             const followers = userInfo.followers || 0;
 
-            web2Metrics.influenceValue = (totalStars * multipliers.influence.star) + 
-                                       (totalForks * multipliers.influence.fork) + 
-                                       (followers * multipliers.influence.follower);
+            // Store influence metrics details
+            web2Metrics.influenceBreakdown.stars = {
+                value: totalStars,
+                multiplier: multipliers.influence.star,
+                worth: totalStars * multipliers.influence.star
+            };
+
+            web2Metrics.influenceBreakdown.forks = {
+                value: totalForks,
+                multiplier: multipliers.influence.fork,
+                worth: totalForks * multipliers.influence.fork
+            };
+
+            web2Metrics.influenceBreakdown.followers = {
+                value: followers,
+                multiplier: multipliers.influence.follower,
+                worth: followers * multipliers.influence.follower
+            };
+
+            web2Metrics.influenceValue = 
+                web2Metrics.influenceBreakdown.stars.worth +
+                web2Metrics.influenceBreakdown.forks.worth +
+                web2Metrics.influenceBreakdown.followers.worth;
         }
 
         // Calculate total Web2 worth

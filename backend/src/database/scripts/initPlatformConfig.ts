@@ -53,35 +53,35 @@ const defaultConfig = {
         // Web3 multipliers
         web3: {
             experience: {
-                mainnetContract: 2000,    // Reduced from 5000
-                testnetContract: 500,     // Reduced from 2000
-                cryptoRepoContribution: 60 // Reduced from 1000
+                mainnetContract: 3000,    // Reduced from 5000
+                testnetContract: 2000,     // Reduced from 2000
+                cryptoRepoContribution: 100 // Reduced from 1000
             },
             skill: {
-                solidity: 0.000002,           // Reduced from 0.1
-                rust: 0.00003,              // Reduced from 0.15
-                move: 0.00025,             // Reduced from 0.12
-                cadence: 0.00025           // Reduced from 0.12
+                solidity: 0.002,           // Reduced from 0.1
+                rust: 0.003,              // Reduced from 0.15
+                move: 0.0025,             // Reduced from 0.12
+                cadence: 0.0025           // Reduced from 0.12
             },
             influence: {
-                tvlMultiplier: 0.0001,    // Reduced from 0.001
+                tvlMultiplier: 0.1,    // Reduced from 0.001
                 uniqueUser: 20,           // Reduced from 100
-                transaction: 2            // Reduced from 10
+                transaction: 20            // Reduced from 10
             }
         },
         // Web2 multipliers
         web2: {
             experience: {
-                accountAge: 20,           // Reduced from 100
+                accountAge: 2,           // Reduced from 100
                 pr: 100,                  // Reduced from 500
-                contribution: 10          // Reduced from 50
+                contribution: 20          // Reduced from 50
             },
             skill: {
-                lineOfCode: 0.0000000001       // Reduced from 0.05
+                lineOfCode: 0.0001       // Reduced from 0.05
             },
             influence: {
-                star: 20,                 // Reduced from 100
-                fork: 40,                 // Reduced from 200
+                star: 10,                 // Reduced from 100
+                fork: 20,                 // Reduced from 200
                 follower: 10              // Reduced from 50
             }
         }
