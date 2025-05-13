@@ -48,7 +48,7 @@ export class OnchainDataManager {
                 return await operation();
             } catch (error: any) {
                 lastError = error;
-                console.log(`[${operationName}] Attempt ${attempt} failed with status ${error.status}. Retrying in ${delay}ms...`);
+                console.log(`[${operationName}] Attempt ${attempt} failed with status ${error}. Retrying in ${delay}ms...`);
                 
                 // Special handling for getBlock after max retries
                 if (operationName.startsWith('getBlock-') && attempt === retries) {
