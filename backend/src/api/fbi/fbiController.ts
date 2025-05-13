@@ -35,7 +35,7 @@ export class FbiController {
                     
                     try {
                         // Get Alchemy provider for mainnet
-                        const provider = getAlchemyProvider(Network.ETH_MAINNET);
+                        const provider = await getAlchemyProvider(Network.ETH_MAINNET);
                         // Resolve ENS name
                         const resolvedAddress = await provider.core.resolveName(address);
                         if (resolvedAddress) {
