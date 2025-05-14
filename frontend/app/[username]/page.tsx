@@ -987,7 +987,7 @@ console.log("userData",userData);
             <div className="w-full md:w-80 space-y-5">
               {/* Score Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <h2 className="text-xl font-semibold mb-5">Score Overview</h2>
+                <h2 className="text-lg font-semibold mb-5">Score Overview</h2>
                 
                 <div className="space-y-5">
                   {/* Overall Score */}
@@ -1036,7 +1036,7 @@ console.log("userData",userData);
 
               {/* Worth Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <h2 className="text-xl font-semibold mb-5">Builder Talent Worth Overview</h2>
+                <h2 className="text-lg font-semibold mb-5">Builder Worth Overview</h2>
                 
                 <div className="space-y-5">
                   {/* Overall Score */}

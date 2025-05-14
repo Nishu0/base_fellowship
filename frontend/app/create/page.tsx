@@ -81,7 +81,7 @@ export default function UserDataForm() {
           clearInterval(interval);
           // Wait 2 seconds before redirecting to give user time to see completion
           setTimeout(() => {
-            window.location.href = `/user/${username}`;
+            window.location.href = `/${username}`;
           }, 2000);
         } else if (response.data.data.status === "FAILED") {
           clearInterval(interval);
@@ -115,7 +115,7 @@ export default function UserDataForm() {
       
     } catch (error) {
       console.error("Error submitting form:", error);
-      alert("An error occurred while analyzing your profile. Please try again.");
+      //alert("An error occurred while analyzing your profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
