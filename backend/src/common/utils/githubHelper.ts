@@ -222,7 +222,7 @@ export class GitHubHelper {
         parent: { nameWithOwner: string } | null;
       }) => {
         // Only count forks that were created by the user (not inherited from parent)
-        if (repo.isFork || repo.fullName.includes(username)) {
+        if (repo.isFork || repo.fullName.toLocaleLowerCase().includes(username)) {
           totalForks += repo.forkCount;
           totalStars += repo.stargazerCount;
         }
