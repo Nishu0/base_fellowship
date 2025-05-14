@@ -757,8 +757,8 @@ console.log("userData",userData);
     scores,
     worth: {
       total: userData.developerWorth?.totalWorth || 0,
-      web2: userData.developerWorth?.breakdown?.web2Worth || 0,
-      web3: userData.developerWorth?.breakdown?.web3Worth || 0
+      web2: userData.developerWorth?.breakdown?.web2?.totalWorth || 0,
+      web3: userData.developerWorth?.breakdown?.web3?.totalWorth || 0
     },
     chains: onchainData.chains as ChainData[],
     githubActivity: {
@@ -892,7 +892,7 @@ console.log("userData",userData);
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Worth</h3>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Builder Worth</h3>
                   <div className="text-2xl font-bold">${formatNumber(user.worth.total)}</div>
                 </div>
                 <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
@@ -1032,7 +1032,7 @@ console.log("userData",userData);
 
               {/* Worth Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <h2 className="text-xl font-semibold mb-5">Worth Overview</h2>
+                <h2 className="text-xl font-semibold mb-5">Builder Talent Worth Overview</h2>
                 
                 <div className="space-y-5">
                   {/* Overall Score */}
@@ -1085,7 +1085,7 @@ console.log("userData",userData);
                   onClick={() => setActiveTab("chains")}
                   className={`rounded-full px-6 ${activeTab === "chains" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
-                  Chains
+                  Web3
                 </Button>
                 <Button 
                   variant={activeTab === "hackathon" ? "default" : "ghost"} 
