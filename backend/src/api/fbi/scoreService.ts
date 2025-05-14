@@ -809,7 +809,7 @@ export class ScoreService {
 
         const transactionStats = user.onchainData?.transactionStats as any;
         const mainnetStats = transactionStats?.total?.mainnet || {};
-        const totalTxs = (mainnetStats.external || 0) + (mainnetStats.internal || 0);
+        const totalTxs = mainnetStats.total || 0;
 
         // Store influence metrics details
         web3Metrics.influenceBreakdown.tvl = {
