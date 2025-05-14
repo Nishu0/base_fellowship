@@ -20,6 +20,7 @@
     "@radix-ui/react-tabs": "^1.1.11",
     "@types/d3": "^7.4.3",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "aframe": "^1.7.1",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",

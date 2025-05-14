@@ -7,6 +7,7 @@ import { siteConfig } from "@/site";
 import ContactModal from "@/components/Contact";
 import { Analytics } from "@vercel/analytics/next"
 import { PostHogProvider } from "@/providers/posthog";
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -75,6 +76,7 @@ export default function RootLayout({
           <Navbar />
           <PostHogProvider>
             {children}
+            <SpeedInsights />
           </PostHogProvider>
           <Analytics/>
         </ThemeProvider>
