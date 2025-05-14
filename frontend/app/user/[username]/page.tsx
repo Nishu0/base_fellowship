@@ -199,8 +199,12 @@ export default function UserProfilePage() {
     developerWorth?: {
       totalWorth: number;
       breakdown: {
-        web2Worth: number;
-        web3Worth: number;
+        web2: {
+          totalWorth: number;
+        };
+        web3: {
+          totalWorth: number;
+        };
       };
     };
     hackathonData?: {
