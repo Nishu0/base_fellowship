@@ -874,7 +874,7 @@ console.log("userData",userData);
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Total Code Worth</h3>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Total Dev Worth</h3>
                   <div className="text-2xl font-bold">${formatNumber(user.worth.total)}</div>
                 </div>
                 <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
@@ -1014,7 +1014,7 @@ console.log("userData",userData);
 
               {/* Worth Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <h2 className="text-lg font-semibold mb-5">Your Code Worth</h2>
+                <h2 className="text-lg font-semibold mb-5">Your Dev Worth</h2>
                 
                 <div className="space-y-5">
                   {/* Overall Score */}
@@ -1129,7 +1129,7 @@ console.log("userData",userData);
                     </div>
                     
                     {/* GitHub heatmap */}
-                    {/* <div className="w-full pt-3">
+                    <div className="w-full pt-3">
                       <div className="flex justify-between items-center mb-2">
                         <h3 className="text-sm font-medium">GitHub Contributions</h3>
                         {githubActivity.availableYears.length > 0 && (
@@ -1157,7 +1157,7 @@ console.log("userData",userData);
                         title=""
                         totalCount={user.githubActivity.totalContributions}
                       />
-                    </div> */}
+                    </div>
                   </div>
                   
                   {/* Blockchain activity card */}
@@ -1203,7 +1203,7 @@ console.log("userData",userData);
                       </div>
                     </div>
                     
-                    {/* {user.onchainActivity.transactionsByDay.length > 0 && (
+                    {user.onchainActivity.transactionsByDay.length > 0 && (
                       <div className="w-full mb-5">
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="text-sm font-medium">On-chain Transactions</h3>
@@ -1234,7 +1234,7 @@ console.log("userData",userData);
                           contributions="onchain"
                         />
                       </div>
-                    )} */}
+                    )}
                   </div>
                 </>
               )}
