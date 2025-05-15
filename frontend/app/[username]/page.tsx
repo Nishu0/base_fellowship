@@ -849,7 +849,7 @@ console.log("userData",userData);
                   </div>
                 </div>
                 
-                <p className="text-zinc-300 mb-3">{user.bio}</p>
+                <p className="text-zinc-300 mb-3 max-w-lg">{user.bio}</p>
                 
                 <div className="flex flex-wrap gap-2 mb-4">
                   {user.skills.slice(0, 4).map(skill => (
@@ -863,31 +863,10 @@ console.log("userData",userData);
                     </Badge>
                   )}
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
-                  {user.location && (
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {user.location}
-                    </div>
-                  )}
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Joined {user.joinedDate}
-                  </div>
-                  {user.blogUrl && (
-                    <div className="flex items-center">
-                      <Globe className="h-4 w-4 mr-1" />
-                      <a href={user.blogUrl} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 truncate">
-                        {user.blogUrl.replace(/^https?:\/\//, '')}
-                      </a>
-                    </div>
-                  )}
-                </div>
               </div>
               
-              {/* Worth and Score Section */}
-              <div className="flex flex-col gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 min-w-[180px]">
+              {/* Share Profile Button  */}
+              <div className="flex flex-col gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 min-w-[250px]">
                 <div>
                   <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Score</h3>
                   <div className="flex items-end gap-1">
@@ -896,7 +875,7 @@ console.log("userData",userData);
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Builder Worth</h3>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Total Code Worth</h3>
                   <div className="text-2xl font-bold">${formatNumber(user.worth.total)}</div>
                 </div>
                 <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
@@ -991,7 +970,7 @@ console.log("userData",userData);
                 
                 <div className="space-y-5">
                   {/* Overall Score */}
-                  <div>
+                  {/* <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-zinc-400">Overall Score</span>
                       <span className="font-medium">{user.scores.overall}/100</span>
@@ -1002,12 +981,12 @@ console.log("userData",userData);
                         style={{ width: `${user.scores.overall}%` }}
                       ></div>
                     </div>
-                  </div>
+                  </div> */}
                   
                   {/* Onchain Score */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web3 Score</span>
+                      <span className="text-zinc-400">Onchain Dev Score</span>
                       <span className="font-medium">{user.scores.onchain}/100</span>
                     </div>
                     <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
@@ -1021,7 +1000,7 @@ console.log("userData",userData);
                   {/* Web2 Score */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web2 Score</span>
+                      <span className="text-zinc-400">Web2 Dev Score</span>
                       <span className="font-medium">{user.scores.web2}/100</span>
                     </div>
                     <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
@@ -1036,32 +1015,33 @@ console.log("userData",userData);
 
               {/* Worth Overview Card */}
               <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                <h2 className="text-lg font-semibold mb-5">Builder Worth Overview</h2>
+                <h2 className="text-lg font-semibold mb-5">Your Code Worth</h2>
                 
                 <div className="space-y-5">
                   {/* Overall Score */}
-                  <div>
+                  {/* <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-zinc-400">Overall Worth</span>
-                      <span className="font-medium">${formatNumber(user.worth.total)}</span>
+                      <span className="font-medium">{formatNumber(user.worth.total)}</span>
                     </div>
-                  </div>
+                  </div> */}
                   
                   {/* Onchain Score */}
                   <div>
+                  <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web2 Worth</span>
-                      <span className="font-medium">${formatNumber(user.worth.web2)}</span>
+                      <span className="text-zinc-400">Onchain</span>
+                      <span className="font-medium">{formatNumber(user.worth.web3)}</span>
+                    </div>
+                  </div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-zinc-400">Web2</span>
+                      <span className="font-medium">{formatNumber(user.worth.web2)}</span>
                     </div>
                   </div>
                   
                   {/* Web2 Score */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web3 Worth</span>
-                      <span className="font-medium">${formatNumber(user.worth.web3)}</span>
-                    </div>
-                  </div>
+                  
                 </div>
               </div>
             </div>
@@ -1150,7 +1130,7 @@ console.log("userData",userData);
                     </div>
                     
                     {/* GitHub heatmap */}
-                    <div className="w-full pt-3">
+                    {/* <div className="w-full pt-3">
                       <div className="flex justify-between items-center mb-2">
                         <h3 className="text-sm font-medium">GitHub Contributions</h3>
                         {githubActivity.availableYears.length > 0 && (
@@ -1178,7 +1158,7 @@ console.log("userData",userData);
                         title=""
                         totalCount={user.githubActivity.totalContributions}
                       />
-                    </div>
+                    </div> */}
                   </div>
                   
                   {/* Blockchain activity card */}
@@ -1224,7 +1204,7 @@ console.log("userData",userData);
                       </div>
                     </div>
                     
-                    {user.onchainActivity.transactionsByDay.length > 0 && (
+                    {/* {user.onchainActivity.transactionsByDay.length > 0 && (
                       <div className="w-full mb-5">
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="text-sm font-medium">On-chain Transactions</h3>
@@ -1255,7 +1235,7 @@ console.log("userData",userData);
                           contributions="onchain"
                         />
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </>
               )}
