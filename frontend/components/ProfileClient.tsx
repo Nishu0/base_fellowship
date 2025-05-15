@@ -288,8 +288,9 @@ export default function ProfileClient({username}: {username: string}) {
     const githubScore = userData.score?.metrics?.web2?.total || 0;
     const onchainScore = userData.score?.metrics?.web3?.total || 0;
     const overallScore = Math.round((githubScore + onchainScore) / 2);
+    const overallWorth = userData.developerWorth?.totalWorth || 0;
     
-    const shareText = `Check out my Klyro developer profile!\n\nKlyro Score: ${overallScore}/100\nOnchain Score: ${onchainScore}/100\nGitHub Score: ${githubScore}/100\n\n`;
+    const shareText = `Looks like my @0xklyro score thinks I'm worth $${formatNumber(overallWorth)} based on my commits 😂\n\nKlyro Score: ${overallScore}/100\nOnchain Score: ${onchainScore}/100\nGitHub Score: ${githubScore}/100\n\n`;
     return `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(getShareUrl())}`;
   };
   
