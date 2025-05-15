@@ -36,10 +36,19 @@ import {
   Layers,
   Share2,
   Copy,
-  Check
+  Check,
+  ChevronRight,
+  HelpCircle
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/axiosClient";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Format numbers to display with K for thousands, M for millions, etc.
 const formatNumber = (value: number): string => {
@@ -203,6 +212,12 @@ export default function ProfileClient({username}: {username: string}) {
         };
         web3: {
           totalWorth: number;
+          cryptoRepoContributions?: {
+            value: number;
+            worth: number;
+            details: Record<string, number>;
+            multiplier: number;
+          };
         };
       };
     };
@@ -228,6 +243,26 @@ export default function ProfileClient({username}: {username: string}) {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedGithubYear, setSelectedGithubYear] = useState<number | null>(null);
   const [selectedOnchainYear, setSelectedOnchainYear] = useState<number | null>(null);
+  const [isCryptoContribOpen, setIsCryptoContribOpen] = useState(false);
+  
+  // Heatmap states - closed by default in overview, open in dedicated tabs
+  const [isGithubHeatmapOpen, setIsGithubHeatmapOpen] = useState(false);
+  const [isOnchainHeatmapOpen, setIsOnchainHeatmapOpen] = useState(false);
+  
+  // Update the heatmap states when tab changes
+  useEffect(() => {
+    if (activeTab === "github") {
+      setIsGithubHeatmapOpen(true);
+      setIsOnchainHeatmapOpen(false);
+    } else if (activeTab === "chains") {
+      setIsOnchainHeatmapOpen(true);
+      setIsGithubHeatmapOpen(false);
+    } else if (activeTab === "overview") {
+      // Reset both to closed when returning to overview
+      setIsGithubHeatmapOpen(false);
+      setIsOnchainHeatmapOpen(false);
+    }
+  }, [activeTab]);
   
   // Get current URL for sharing
   const getShareUrl = () => {
@@ -362,10 +397,14 @@ export default function ProfileClient({username}: {username: string}) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
+    // Use total contributions from userData instead of just the selected year
+    const totalContributions = userData.contributionData.totalContributions;
+    
     return {
       contributionsByDay: dailyCounts,
       contributionMonths: Array.from(months),
-      totalContributions: yearContributions.reduce((sum, day) => sum + day.contributionCount, 0),
+      totalContributions: totalContributions, // Always use total from all years
+      selectedYearContributions: yearContributions.reduce((sum, day) => sum + day.contributionCount, 0), // Year-specific count
       availableYears: years
     };
   };
@@ -768,6 +807,7 @@ console.log("userData",userData);
       contributionsByDay: githubActivity.contributionsByDay,
       contributionMonths: githubActivity.contributionMonths as string[],
       totalContributions: githubActivity.totalContributions,
+      selectedYearContributions: githubActivity.selectedYearContributions || 0,
       topRepos,
       followers: userData.userData.followers,
       repos: userData.userData.public_repos,
@@ -867,14 +907,38 @@ console.log("userData",userData);
               {/* Share Profile Button  */}
               <div className="flex flex-col gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 min-w-[250px]">
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Overall Score</h3>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1 flex items-center">
+                    Overall Score
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-[200px] text-xs">Score based on normalized GitHub and onchain metrics, each capped at 100 points</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </h3>
                   <div className="flex items-end gap-1">
                     <span className="text-2xl font-bold">{user.scores.overall}</span>
                     <span className="text-sm text-zinc-500 mb-1">/100</span>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-400 mb-1">Total Dev Worth</h3>
+                  <h3 className="text-sm font-medium text-zinc-400 mb-1 flex items-center">
+                    Total Dev Worth
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="w-[200px] text-xs">Combined value of your code, contributions, and onchain activity</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </h3>
                   <div className="text-2xl font-bold">${formatNumber(user.worth.total)}</div>
                 </div>
                 <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
@@ -968,24 +1032,21 @@ console.log("userData",userData);
                 <h2 className="text-lg font-semibold mb-5">Score Overview</h2>
                 
                 <div className="space-y-5">
-                  {/* Overall Score */}
-                  {/* <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Overall Score</span>
-                      <span className="font-medium">{user.scores.overall}/100</span>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full"
-                        style={{ width: `${user.scores.overall}%` }}
-                      ></div>
-                    </div>
-                  </div> */}
-                  
-                  {/* Onchain Score */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Onchain Dev Score</span>
+                      <span className="text-zinc-400 flex items-center">
+                        Onchain Dev Score
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">Calculated from contract deployments, transactions, users and TVL metrics</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
                       <span className="font-medium">{user.scores.onchain}/100</span>
                     </div>
                     <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
@@ -996,10 +1057,21 @@ console.log("userData",userData);
                     </div>
                   </div>
                   
-                  {/* Web2 Score */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web2 Dev Score</span>
+                      <span className="text-zinc-400 flex items-center">
+                        Web2 Dev Score
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">Based on GitHub metrics like PRs, stars, forks, followers and code contribution</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
                       <span className="font-medium">{user.scores.web2}/100</span>
                     </div>
                     <div className="h-2 w-full bg-zinc-800/60 rounded-full overflow-hidden">
@@ -1017,30 +1089,42 @@ console.log("userData",userData);
                 <h2 className="text-lg font-semibold mb-5">Your Dev Worth</h2>
                 
                 <div className="space-y-5">
-                  {/* Overall Score */}
-                  {/* <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Overall Worth</span>
-                      <span className="font-medium">{formatNumber(user.worth.total)}</span>
-                    </div>
-                  </div> */}
-                  
-                  {/* Onchain Score */}
                   <div>
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Onchain</span>
-                      <span className="font-medium">{formatNumber(user.worth.web3)}</span>
+                      <span className="text-zinc-400 flex items-center">
+                        Onchain
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">Value from deployed contracts, transactions, users and language expertise</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                      <span className="font-medium">${formatNumber(user.worth.web3)}</span>
                     </div>
                   </div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-zinc-400">Web2</span>
-                      <span className="font-medium">{formatNumber(user.worth.web2)}</span>
+                      <span className="text-zinc-400 flex items-center">
+                        Web2
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">Value from GitHub PRs, contributions, followers and code</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                      <span className="font-medium">${formatNumber(user.worth.web2)}</span>
                     </div>
                   </div>
-                  
-                  {/* Web2 Score */}
-                  
                 </div>
               </div>
             </div>
@@ -1130,33 +1214,56 @@ console.log("userData",userData);
                     
                     {/* GitHub heatmap */}
                     <div className="w-full pt-3">
-                      <div className="flex justify-between items-center mb-2">
+                      <button 
+                        onClick={() => setIsGithubHeatmapOpen(!isGithubHeatmapOpen)}
+                        className="flex w-full items-center justify-between mb-2 bg-zinc-900/30 p-2 rounded-lg hover:bg-zinc-900/50 transition-colors focus:outline-none"
+                      >
                         <h3 className="text-sm font-medium">GitHub Contributions</h3>
-                        {githubActivity.availableYears.length > 0 && (
-                          <div className="flex space-x-2">
-                            {githubActivity.availableYears.map(year => (
-                              <button
-                                key={year}
-                                onClick={() => setSelectedGithubYear(year)}
-                                className={`px-2 py-1 text-xs rounded-md ${
-                                  selectedGithubYear === year 
-                                    ? 'bg-indigo-600 text-white' 
-                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                }`}
-                              >
-                                {year}
-                              </button>
-                            ))}
+                        <div className="flex items-center">
+                          {githubActivity.availableYears.length > 0 && (
+                            <div className="flex space-x-2 mr-2">
+                              {githubActivity.availableYears.map(year => (
+                                <button
+                                  key={year}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedGithubYear(year);
+                                  }}
+                                  className={`px-2 py-1 text-xs rounded-md ${
+                                    selectedGithubYear === year 
+                                      ? 'bg-indigo-600 text-white' 
+                                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                  }`}
+                                >
+                                  {year}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <ChevronRight className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isGithubHeatmapOpen ? 'rotate-90' : ''}`} />
+                        </div>
+                      </button>
+                      
+                      {isGithubHeatmapOpen && (
+                        <>
+                          <ActivityHeatmap
+                            data={user.githubActivity.contributionsByDay}
+                            months={user.githubActivity.contributionMonths}
+                            colorScheme="github"
+                            title=""
+                            totalCount={user.githubActivity.selectedYearContributions}
+                            contributions="github"
+                          />
+                          <div className="mt-2 text-xs text-zinc-400 flex justify-between">
+                            <div>
+                              {user.githubActivity.selectedYearContributions} contributions in {selectedGithubYear || new Date().getFullYear()}
+                            </div>
+                            <div>
+                              {user.githubActivity.contributions} lifetime contributions
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <ActivityHeatmap
-                        data={user.githubActivity.contributionsByDay}
-                        months={user.githubActivity.contributionMonths}
-                        colorScheme="github"
-                        title=""
-                        totalCount={user.githubActivity.totalContributions}
-                      />
+                        </>
+                      )}
                     </div>
                   </div>
                   
@@ -1205,34 +1312,46 @@ console.log("userData",userData);
                     
                     {user.onchainActivity.transactionsByDay.length > 0 && (
                       <div className="w-full mb-5">
-                        <div className="flex justify-between items-center mb-2">
+                        <button 
+                          onClick={() => setIsOnchainHeatmapOpen(!isOnchainHeatmapOpen)}
+                          className="flex w-full items-center justify-between mb-2 bg-zinc-900/30 p-2 rounded-lg hover:bg-zinc-900/50 transition-colors focus:outline-none"
+                        >
                           <h3 className="text-sm font-medium">On-chain Transactions</h3>
-                          {onchainActivity.availableYears.length > 0 && (
-                            <div className="flex space-x-2">
-                              {onchainActivity.availableYears.map(year => (
-                                <button
-                                  key={year}
-                                  onClick={() => setSelectedOnchainYear(year)}
-                                  className={`px-2 py-1 text-xs rounded-md ${
-                                    selectedOnchainYear === year 
-                                      ? 'bg-indigo-600 text-white' 
-                                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                  }`}
-                                >
-                                  {year}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <ActivityHeatmap
-                          data={user.onchainActivity.transactionsByDay}
-                          months={user.onchainActivity.activityMonths}
-                          colorScheme="onchain"
-                          title=""
-                          totalCount={user.onchainActivity.totalTransactions}
-                          contributions="onchain"
-                        />
+                          <div className="flex items-center">
+                            {onchainActivity.availableYears.length > 0 && (
+                              <div className="flex space-x-2 mr-2">
+                                {onchainActivity.availableYears.map(year => (
+                                  <button
+                                    key={year}
+                                    onClick={(e) => {
+                                      e.stopPropagation(); 
+                                      setSelectedOnchainYear(year);
+                                    }}
+                                    className={`px-2 py-1 text-xs rounded-md ${
+                                      selectedOnchainYear === year 
+                                        ? 'bg-indigo-600 text-white' 
+                                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                    }`}
+                                  >
+                                    {year}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            <ChevronRight className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isOnchainHeatmapOpen ? 'rotate-90' : ''}`} />
+                          </div>
+                        </button>
+                        
+                        {isOnchainHeatmapOpen && (
+                          <ActivityHeatmap
+                            data={user.onchainActivity.transactionsByDay}
+                            months={user.onchainActivity.activityMonths}
+                            colorScheme="onchain"
+                            title=""
+                            totalCount={user.onchainActivity.totalTransactions}
+                            contributions="onchain"
+                          />
+                        )}
                       </div>
                     )}
                   </div>
@@ -1249,33 +1368,48 @@ console.log("userData",userData);
                   </div>
                   
                   <div className="w-full">
-                    <div className="flex justify-between items-center mb-2">
+                    <button 
+                      onClick={() => setIsGithubHeatmapOpen(!isGithubHeatmapOpen)}
+                      className="flex w-full items-center justify-between mb-2 bg-zinc-900/30 p-2 rounded-lg hover:bg-zinc-900/50 transition-colors focus:outline-none"
+                    >
                       <h3 className="text-sm font-medium">Contributions</h3>
-                      {githubActivity.availableYears.length > 0 && (
-                        <div className="flex space-x-2">
-                          {githubActivity.availableYears.map(year => (
-                            <button
-                              key={year}
-                              onClick={() => setSelectedGithubYear(year)}
-                              className={`px-2 py-1 text-xs rounded-md ${
-                                selectedGithubYear === year 
-                                  ? 'bg-indigo-600 text-white' 
-                                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                              }`}
-                            >
-                              {year}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <ActivityHeatmap
-                      data={user.githubActivity.contributionsByDay}
-                      months={user.githubActivity.contributionMonths}
-                      colorScheme="github"
-                      title=""
-                      totalCount={user.githubActivity.totalContributions}
-                    />
+                      <div className="flex items-center">
+                        {githubActivity.availableYears.length > 0 && (
+                          <div className="flex space-x-2 mr-2">
+                            {githubActivity.availableYears.map(year => (
+                              <button
+                                key={year}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedGithubYear(year);
+                                }}
+                                className={`px-2 py-1 text-xs rounded-md ${
+                                  selectedGithubYear === year 
+                                    ? 'bg-indigo-600 text-white' 
+                                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                }`}
+                              >
+                                {year}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <ChevronRight className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isGithubHeatmapOpen ? 'rotate-90' : ''}`} />
+                      </div>
+                    </button>
+                    
+                    {isGithubHeatmapOpen && (
+                      <>
+                        <ActivityHeatmap
+                          data={user.githubActivity.contributionsByDay}
+                          months={user.githubActivity.contributionMonths}
+                          colorScheme="github"
+                          title=""
+                          totalCount={user.githubActivity.selectedYearContributions}
+                          contributions="github"
+                        />
+                      </>
+                    )}
                   </div>
 
                   <div>
@@ -1440,34 +1574,46 @@ console.log("userData",userData);
                     <>
                       {user.onchainActivity.transactionsByDay.length > 0 && (
                         <div className="w-full mb-6">
-                          <div className="flex justify-between items-center mb-2">
+                          <button 
+                            onClick={() => setIsOnchainHeatmapOpen(!isOnchainHeatmapOpen)}
+                            className="flex w-full items-center justify-between mb-2 bg-zinc-900/30 p-2 rounded-lg hover:bg-zinc-900/50 transition-colors focus:outline-none"
+                          >
                             <h3 className="text-sm font-medium">On-chain Transactions</h3>
-                            {onchainActivity.availableYears.length > 0 && (
-                              <div className="flex space-x-2">
-                                {onchainActivity.availableYears.map(year => (
-                                  <button
-                                    key={year}
-                                    onClick={() => setSelectedOnchainYear(year)}
-                                    className={`px-2 py-1 text-xs rounded-md ${
-                                      selectedOnchainYear === year 
-                                        ? 'bg-indigo-600 text-white' 
-                                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                                    }`}
-                                  >
-                                    {year}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <ActivityHeatmap
-                            data={user.onchainActivity.transactionsByDay}
-                            months={user.onchainActivity.activityMonths}
-                            colorScheme="onchain"
-                            title=""
-                            totalCount={user.onchainActivity.totalTransactions}
-                            contributions="onchain"
-                          />
+                            <div className="flex items-center">
+                              {onchainActivity.availableYears.length > 0 && (
+                                <div className="flex space-x-2 mr-2">
+                                  {onchainActivity.availableYears.map(year => (
+                                    <button
+                                      key={year}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedOnchainYear(year);
+                                      }}
+                                      className={`px-2 py-1 text-xs rounded-md ${
+                                        selectedOnchainYear === year 
+                                          ? 'bg-indigo-600 text-white' 
+                                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                                      }`}
+                                    >
+                                      {year}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              <ChevronRight className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isOnchainHeatmapOpen ? 'rotate-90' : ''}`} />
+                            </div>
+                          </button>
+                          
+                          {isOnchainHeatmapOpen && (
+                            <ActivityHeatmap
+                              data={user.onchainActivity.transactionsByDay}
+                              months={user.onchainActivity.activityMonths}
+                              colorScheme="onchain"
+                              title=""
+                              totalCount={user.onchainActivity.totalTransactions}
+                              contributions="onchain"
+                            />
+                          )}
                         </div>
                       )}
                       
@@ -1543,6 +1689,88 @@ console.log("userData",userData);
                             </div>
                           </div>
                         ))}
+                      </div>
+                      
+                      {/* Crypto Repository Contributions Section */}
+                      <div className="mt-8">
+                        <div className="w-full">
+                          <button 
+                            onClick={() => setIsCryptoContribOpen(!isCryptoContribOpen)}
+                            className="flex items-center justify-between w-full bg-zinc-900/50 p-4 rounded-lg hover:bg-zinc-900 transition-colors focus:outline-none"
+                          >
+                            <div className="flex items-center">
+                              <BookOpen className="h-5 w-5 mr-2 text-purple-400" />
+                              <div className="flex items-center">
+                                <h3 className="text-md font-medium text-zinc-200">
+                                  Crypto Repository Contributions
+                                </h3>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <HelpCircle className="h-3 w-3 ml-1 text-zinc-500 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="w-[200px] text-xs">Tracks contributions to major projects like Ethereum, Bitcoin, Solana</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </div>
+                            <div className="flex items-center">
+                              <Badge className="bg-purple-900/50 border-purple-800 text-purple-300 mr-3">
+                                0 out of 15 points
+                              </Badge>
+                              <ChevronRight className={`h-5 w-5 text-zinc-400 transition-transform duration-200 ${isCryptoContribOpen ? 'rotate-90' : ''}`} />
+                            </div>
+                          </button>
+                          
+                          {isCryptoContribOpen && (
+                            <div className="pt-4 px-1">
+                              {userData?.developerWorth?.breakdown?.web3?.cryptoRepoContributions && 
+                               userData.developerWorth.breakdown.web3.cryptoRepoContributions.value > 0 ? (
+                                <div className="space-y-4">
+                                  <div className="bg-zinc-900/70 rounded-lg p-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="text-zinc-300">Total Contribution Value</span>
+                                      <span className="font-medium text-indigo-400">
+                                        ${formatNumber(userData.developerWorth.breakdown.web3.cryptoRepoContributions.worth)}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm text-zinc-500">
+                                      Based on {userData.developerWorth.breakdown.web3.cryptoRepoContributions.value} contributions to crypto repositories
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Contribution Details */}
+                                  {userData.developerWorth.breakdown.web3.cryptoRepoContributions.details && 
+                                   Object.keys(userData.developerWorth.breakdown.web3.cryptoRepoContributions.details).length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      {Object.entries(userData.developerWorth.breakdown.web3.cryptoRepoContributions.details).map(([repo, value], index) => (
+                                        <div key={index} className="bg-zinc-800/50 rounded-lg p-3">
+                                          <div className="font-medium text-zinc-200 mb-1">{repo}</div>
+                                          <div className="flex items-center justify-between">
+                                            <div className="text-sm text-zinc-400">Contributions</div>
+                                            <div className="text-indigo-400 font-medium">{String(value)}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-zinc-500 text-sm">No specific repository details available.</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
+                                  <BookOpen className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
+                                  <p className="text-zinc-500">No crypto repository contributions detected yet.</p>
+                                  <p className="text-xs text-zinc-600 mt-2">
+                                    Contributing to open-source crypto projects can significantly boost your onchain development score.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </>
                   ) : (
