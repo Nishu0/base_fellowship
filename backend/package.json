@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.0.0",
+    "@covalenthq/client-sdk": "^2.2.6",
     "@langchain/anthropic": "^0.3.12",
     "@langchain/community": "^0.3.27",
     "@langchain/core": "^0.3.36",

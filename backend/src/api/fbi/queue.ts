@@ -9,6 +9,7 @@ export const analyzeQueue = new QueueManager("analyzeQueue",
     {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,
+        password: env.REDIS_PASSWORD,
         defaultJobOptions: {
             attempts: 6,  // Number of retry attempts
             backoff: {
