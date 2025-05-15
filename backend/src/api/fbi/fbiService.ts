@@ -281,7 +281,11 @@ export class FbiService {
                 enabledChains.map(async (chain) => {
                     try {
                         Logger.info('FbiService', `Processing chain: ${chain} for userId: ${user.id}`);
-                        const onchainDataManager = new OnchainDataManager(alchemyApiKey, chain);
+                        const onchainDataManager = new OnchainDataManager(
+                            alchemyApiKey, 
+                            env.CRYPTO_COMPARE_API_KEY,
+                            chain
+                        );
                         
                         // Get the start block number (half of current block)
                         const startBlock = await onchainDataManager.getHalfBlock();
@@ -462,9 +466,9 @@ export class FbiService {
             const hackathonResults = await Promise.all(hackathonCredentialsPromises);
             
             // Combine hackathon results from all addresses
-            const combinedHackathonData = hackathonResults.reduce((acc, curr) => ({
-                totalWins: acc.totalWins + (curr.totalWins || 0),
-                totalHacker: acc.totalHacker + (curr.totalHacker || 0),
+            const partialCombinedData = hackathonResults.reduce((acc, curr) => ({
+                ethGlobalWins: acc.ethGlobalWins + (curr.totalWins || 0),
+                ethGlobalHacker: acc.ethGlobalHacker + (curr.totalHacker || 0),
                 HACKER: {
                     count: acc.HACKER.count + (curr.HACKER?.count || 0),
                     packs: { ...acc.HACKER.packs, ...curr.HACKER?.packs }
@@ -472,12 +476,41 @@ export class FbiService {
                 WINS: {
                     count: acc.WINS.count + (curr.WINS?.count || 0),
                     packs: { ...acc.WINS.packs, ...curr.WINS?.packs }
-                }
+                },
+                POAP_WINS: {
+                    count: (acc.POAP_WINS?.count || 0) + (curr.POAP_WINS?.count || 0),
+                    packs: { ...(acc.POAP_WINS?.packs || {}), ...(curr.POAP_WINS?.packs || {}) }
+                },
+                POAP_HACKER: {
+                    count: (acc.POAP_HACKER?.count || 0) + (curr.POAP_HACKER?.count || 0),
+                    packs: { ...(acc.POAP_HACKER?.packs || {}), ...(curr.POAP_HACKER?.packs || {}) }
+                },
+                totalPoaps: (acc.totalPoaps || 0) + (curr.totalPoaps || 0)
             }), {
-                totalWins: 0,
-                totalHacker: 0,
+                ethGlobalWins: 0,
+                ethGlobalHacker: 0,
                 HACKER: { count: 0, packs: {} },
-                WINS: { count: 0, packs: {} }
+                WINS: { count: 0, packs: {} },
+                POAP_WINS: { count: 0, packs: {} },
+                POAP_HACKER: { count: 0, packs: {} },
+                totalPoaps: 0
+            });
+            
+            // Add calculated total values
+            const combinedHackathonData = {
+                ...partialCombinedData,
+                totalWins: partialCombinedData.ethGlobalWins + partialCombinedData.POAP_WINS.count,
+                totalHacker: partialCombinedData.ethGlobalHacker + partialCombinedData.POAP_HACKER.count
+            };
+
+            Logger.info('FbiService', `Combined hackathon data summary for user: ${user.id}`, {
+                ethGlobalWins: combinedHackathonData.WINS.count,
+                ethGlobalHacker: combinedHackathonData.HACKER.count,
+                poapWins: combinedHackathonData.POAP_WINS.count,
+                poapHacker: combinedHackathonData.POAP_HACKER.count,
+                totalWins: combinedHackathonData.totalWins,
+                totalHacker: combinedHackathonData.totalHacker,
+                totalPoaps: combinedHackathonData.totalPoaps
             });
 
             // Store hackathon data in onchainData

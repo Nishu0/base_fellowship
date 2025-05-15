@@ -1,5 +1,12 @@
 import { Alchemy, AssetTransfersCategory, Network } from 'alchemy-sdk';
 import { checkCommunityPacks, checkFinalistPacks } from './ethglobalCred';
+import { getPOAPCredentials } from './poapCredentials';
+import axios from 'axios';
+
+interface PriceCache {
+    price: number;
+    timestamp: number;
+}
 
 export class OnchainDataManager {
     private alchemy: Alchemy;
@@ -7,15 +14,82 @@ export class OnchainDataManager {
     private readonly MAX_RETRIES = 10;
     private readonly INITIAL_DELAY = 1000; // 3 second
     private readonly BLOCK_RETRIES = 4; // Specific retries for getBlock
+    private static priceCache: Record<string, PriceCache> = {}; // Cache for crypto prices
+    private static readonly CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes in milliseconds
+    private cryptoCompareApiKey: string;
 
-    constructor(apiKey: string, network: Network = Network.ETH_MAINNET) {
+    constructor(apiKey: string, cryptoCompareApiKey: string, network: Network = Network.ETH_MAINNET) {
         this.network = network;
         this.alchemy = new Alchemy({
             apiKey,
             network,
             maxRetries: 5
         });
+        this.cryptoCompareApiKey = cryptoCompareApiKey;
         console.log(`[OnchainDataManager] Initialized with network: ${network}`);
+    }
+
+    /**
+     * Fetches the current price of a cryptocurrency with caching
+     * @param fromSymbol Symbol of the cryptocurrency to get price for (e.g. ETH)
+     * @param toSymbol Symbol to convert to (e.g. USD)
+     * @returns The current price
+     */
+    private async getCryptoPrice(fromSymbol: string, toSymbol: string = 'USD'): Promise<number> {
+        const cacheKey = `${fromSymbol}-${toSymbol}`;
+        const now = Date.now();
+        
+        // Check if we have a cached price that's still valid
+        if (OnchainDataManager.priceCache[cacheKey] && 
+            now - OnchainDataManager.priceCache[cacheKey].timestamp < OnchainDataManager.CACHE_EXPIRY) {
+            console.log(`[getCryptoPrice] Using cached price for ${fromSymbol}-${toSymbol}: ${OnchainDataManager.priceCache[cacheKey].price}`);
+            return OnchainDataManager.priceCache[cacheKey].price;
+        }
+
+        // Fetch new price from API
+        try {
+            console.log(`[getCryptoPrice] Fetching fresh price for ${fromSymbol}-${toSymbol}`);
+            const response = await axios.get(`https://min-api.cryptocompare.com/data/price`, {
+                params: {
+                    fsym: fromSymbol,
+                    tsyms: toSymbol,
+                    api_key: this.cryptoCompareApiKey
+                }
+            });
+
+            const price = response.data[toSymbol];
+            
+            // Cache the new price
+            OnchainDataManager.priceCache[cacheKey] = {
+                price,
+                timestamp: now
+            };
+            
+            console.log(`[getCryptoPrice] Updated price for ${fromSymbol}-${toSymbol}: ${price}`);
+            return price;
+        } catch (error) {
+            console.error(`[getCryptoPrice] Error fetching price for ${fromSymbol}-${toSymbol}:`, error);
+            
+            // If we have an outdated cache, use it as fallback
+            if (OnchainDataManager.priceCache[cacheKey]) {
+                console.log(`[getCryptoPrice] Using outdated cache as fallback for ${fromSymbol}-${toSymbol}`);
+                return OnchainDataManager.priceCache[cacheKey].price;
+            }
+            
+            // Otherwise, return a default value (or throw an error)
+            return 0;
+        }
+    }
+
+    /**
+     * Helper function to convert crypto amount to USD value
+     * @param amount Amount in crypto
+     * @param symbol Symbol of the cryptocurrency (e.g. ETH)
+     * @returns The value in USD
+     */
+    private async convertToUsd(amount: number, symbol: string): Promise<number> {
+        const price = await this.getCryptoPrice(symbol);
+        return amount * price;
     }
 
     /**
@@ -308,6 +382,21 @@ export class OnchainDataManager {
 
             console.log(`Found ${contractAddresses?.length || 0} Contracts deployed by ${deployerAddress}`);
 
+            // Legitimate token addresses for TVL calculation
+            const legitimateTokens = {
+                // Base Mainnet tokens
+                [Network.BASE_MAINNET]: {
+                    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+                    WETH: '0x4200000000000000000000000000000000000006'
+                },
+                // Ethereum Mainnet tokens
+                [Network.ETH_MAINNET]: {
+                    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+                    WETH: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+                    USDT: '0xdac17f958d2ee523a2206206994597c13d831ec7'
+                }
+            };
+
             // Get detailed metrics for each contract
             const contractsWithMetrics = await Promise.all(
                 contractAddresses.map(async (contract) => {
@@ -321,12 +410,19 @@ export class OnchainDataManager {
                         const deploymentDate = new Date(Number(block.timestamp) * 1000).toISOString();
 
                         // Get all transfers to/from the contract to calculate unique users and TVL
+                        const isTestnet = this.network.toString().includes("sepolia");
+                        
+                        // For testnets, only consider ETH transfers
+                        const categories = isTestnet 
+                            ? [AssetTransfersCategory.EXTERNAL] 
+                            : [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20];
+                            
                         const transfers = await this.retryWithBackoff(
                             () => this.alchemy.core.getAssetTransfers({
                                 fromBlock: `0x${contract.blockNumber.toString(16)}`,
                                 toBlock: 'latest',
                                 toAddress: contract.address,
-                                category: [AssetTransfersCategory.EXTERNAL, AssetTransfersCategory.ERC20],
+                                category: categories,
                             }),
                             `getAssetTransfers-contract-${contract.address}`
                         );
@@ -337,10 +433,48 @@ export class OnchainDataManager {
                             uniqueAddresses.add(transfer.from);
                         });
 
-                        // Calculate TVL (sum of all incoming transfers)
-                        const tvl = transfers.transfers.reduce((acc, transfer) => {
-                            return acc + (transfer.value ? Number(transfer.value) : 0);
-                        }, 0).toString();
+                        // Calculate TVL (sum of all incoming transfers converted to USD)
+                        let tvlInEth = 0;
+                        let tvlInUsd = 0;
+                        
+                        // Process all transfers and calculate values
+                        for (const transfer of transfers.transfers) {
+                            if (isTestnet) {
+                                // For testnet, only consider ETH transfers
+                                if (transfer.asset === 'ETH' && transfer.value) {
+                                    const ethValue = Number(transfer.value);
+                                    tvlInEth += ethValue;
+                                }
+                            } else {
+                                // For mainnet, only consider specified legitimate tokens
+                                const networkTokens = legitimateTokens[this.network as keyof typeof legitimateTokens];
+                                if (networkTokens) {
+                                    // For native ETH transfers
+                                    if (transfer.asset === 'ETH' && transfer.value) {
+                                        const ethValue = Number(transfer.value);
+                                        tvlInEth += ethValue;
+                                    }
+                                    // For ERC20 token transfers, check contract address
+                                    else if (transfer.rawContract && transfer.rawContract.address && transfer.value) {
+                                        const tokenAddress = transfer.rawContract.address.toLowerCase();
+                                        const isLegitToken = Object.entries(networkTokens)
+                                            .some(([symbol, addr]) => addr.toLowerCase() === tokenAddress);
+                                        
+                                        if (isLegitToken) {
+                                            // For simplicity, we're adding up token values directly
+                                            // In a real-world scenario, you'd need to account for token decimals
+                                            // and convert each token to USD at its own exchange rate
+                                            tvlInEth += Number(transfer.value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Convert the TVL from ETH to USD
+                        if (tvlInEth > 0) {
+                            tvlInUsd = await this.convertToUsd(tvlInEth, 'ETH');
+                        }
 
                         // Get total number of transactions
                         const totalTransactions = transfers.transfers.length;
@@ -350,9 +484,9 @@ export class OnchainDataManager {
                             blockNumber: contract.blockNumber,
                             deploymentDate,
                             uniqueUsers: uniqueAddresses.size,
-                            tvl,
+                            tvl: tvlInUsd.toString(),
                             totalTransactions,
-                            isTestnet: this.network.toString().includes("sepolia")
+                            isTestnet
                         };
                     } catch (error) {
                         console.error(`Error getting metrics for contract ${contract.address}:`, error);
@@ -377,12 +511,13 @@ export class OnchainDataManager {
     }
 
     static async getHackathonCredentials(address: string): Promise<any> {
-        console.log("Getting ETHGlobal credentials for", address);
+        console.log("Getting hackathon credentials for", address);
         
-        // Run both checks in parallel
-        const [communityPacksResult, finalistPacksResult] = await Promise.all([
+        // Run all checks in parallel
+        const [communityPacksResult, finalistPacksResult, poapCredentials] = await Promise.all([
             checkCommunityPacks(address),
-            checkFinalistPacks(address)
+            checkFinalistPacks(address),
+            getPOAPCredentials(address)
         ]);
         
         return {
@@ -394,9 +529,10 @@ export class OnchainDataManager {
                 count: finalistPacksResult.count,
                 packs: finalistPacksResult.results
             },
-            
-            totalWins: finalistPacksResult.count,
-            totalHacker: communityPacksResult.count
+            POAP_WINS: poapCredentials.POAP_WINS,
+            POAP_HACKER: poapCredentials.POAP_HACKER,
+            totalWins: finalistPacksResult.count + poapCredentials.totalPoapWins,
+            totalHacker: communityPacksResult.count + poapCredentials.totalPoapHacker
         };
     }
 

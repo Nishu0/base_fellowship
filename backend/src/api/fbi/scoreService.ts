@@ -282,7 +282,7 @@ export class ScoreService {
         });
 
         const hackathonData = onchainData?.hackathonData as any;
-        const totalWins = hackathonData?.totalWins || 0;
+        const totalWins = (hackathonData?.totalWins || 0) + (hackathonData?.POAP_WINS?.count || 0);
 
         // Calculate hackathon score
         const hackathonScore = Math.min(totalWins / thresholds.hackathonWins, 1) * weights.hackathonWins;
@@ -291,7 +291,10 @@ export class ScoreService {
             threshold: thresholds.hackathonWins,
             weight: weights.hackathonWins,
             score: hackathonScore,
-            details: hackathonData
+            details: {
+                ethGlobalWins: hackathonData?.WINS || { count: 0, packs: {} },
+                poapWins: hackathonData?.POAP_WINS || { count: 0, packs: {} }
+            }
         };
 
         // 1. Contracts Deployed (20 points total)
@@ -630,6 +633,15 @@ export class ScoreService {
                     multiplier: 0,
                     worth: 0,
                     details: {} as Record<string, number>
+                },
+                hackathonWins: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0,
+                    details: {
+                        ethGlobalWins: 0,
+                        poapWins: 0
+                    }
                 }
             },
             skillValue: 0,
@@ -693,7 +705,8 @@ export class ScoreService {
             experience: {
                 mainnetContract: 2000,
                 testnetContract: 500,
-                cryptoRepoContribution: 200
+                cryptoRepoContribution: 200,
+                hackathonWin: 1000
             },
             skill: {
                 solidity: 0.02,
@@ -727,6 +740,26 @@ export class ScoreService {
             worth: testnetContracts * multipliers.experience.testnetContract
         };
 
+        // Add hackathon wins
+        const onchainData = await prisma.onchainData.findUnique({
+            where: { userId: user.id }
+        });
+        
+        const hackathonData = onchainData?.hackathonData as any;
+        const ethGlobalWins = hackathonData?.WINS?.count || 0;
+        const poapWins = hackathonData?.POAP_WINS?.count || 0;
+        const totalHackathonWins = ethGlobalWins + poapWins;
+
+        web3Metrics.experienceBreakdown.hackathonWins = {
+            value: totalHackathonWins,
+            multiplier: multipliers.experience.hackathonWin || 1000,
+            worth: totalHackathonWins * (multipliers.experience.hackathonWin || 1000),
+            details: {
+                ethGlobalWins,
+                poapWins
+            }
+        };
+
         // Add crypto repo contributions
         const githubData = user.githubData;
         if (githubData) {
@@ -756,7 +789,8 @@ export class ScoreService {
         web3Metrics.experienceValue = 
             web3Metrics.experienceBreakdown.mainnetContracts.worth +
             web3Metrics.experienceBreakdown.testnetContracts.worth +
-            web3Metrics.experienceBreakdown.cryptoRepoContributions.worth;
+            web3Metrics.experienceBreakdown.cryptoRepoContributions.worth +
+            web3Metrics.experienceBreakdown.hackathonWins.worth;
 
         // 2. Skill Value
         if (githubData) {
