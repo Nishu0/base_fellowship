@@ -35,10 +35,16 @@ export class FbiController {
                     }
                     
                     try {
-                        // Get Alchemy provider for mainnet
-                        const provider = await getAlchemyProvider(Network.ETH_MAINNET);
-                        // Resolve ENS name
-                        const resolvedAddress = await provider.core.resolveName(address);
+                        // First try Ethereum mainnet
+                        const mainnetProvider = await getAlchemyProvider(Network.ETH_MAINNET);
+                        let resolvedAddress = await mainnetProvider.core.resolveName(address);
+                        
+                        // If not found on mainnet, try Base chain
+                        if (!resolvedAddress) {
+                            const baseProvider = await getAlchemyProvider(Network.BASE_MAINNET);
+                            resolvedAddress = await baseProvider.core.resolveName(address);
+                        }
+                        
                         if (resolvedAddress) {
                             Logger.info('FbiController', 'ENS name resolved', { 
                                 ensName: address, 
