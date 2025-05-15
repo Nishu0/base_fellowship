@@ -148,7 +148,7 @@ export default function ScoreCalculation() {
             </div>
             
             <div className="mt-8">
-              <Link href="/profile/sample">
+              <Link href="/Nishu0">
                 <Button className="w-full bg-emerald-900 hover:bg-emerald-800 text-white rounded-lg py-3">
                   View Sample Profile
                   <ArrowUpRightFromCircle className="ml-2 h-4 w-4" />

@@ -95,23 +95,17 @@ export default function TermsOfUsePage() {
             </section>
             
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-white">9. Privacy Policy</h2>
-              <p>
-                Your use of Klyro is also governed by our Privacy Policy, which can be found <Link href="/privacy" className="text-indigo-400 hover:underline">here</Link>.
-              </p>
-            </section>
-            
-            <section>
-              <h2 className="text-xl font-semibold mb-3 text-white">10. Governing Law</h2>
+              <h2 className="text-xl font-semibold mb-3 text-white">9. Governing Law</h2>
               <p>
                 These terms and conditions are governed by and construed in accordance with the laws and you irrevocably submit to the exclusive jurisdiction of the courts in that location.
               </p>
             </section>
             
             <section>
-              <h2 className="text-xl font-semibold mb-3 text-white">11. Contact Information</h2>
+              <h2 className="text-xl font-semibold mb-3 text-white">10. Contact Information</h2>
               <p>
-                If you have any questions about these Terms of Use, please contact us at legal@klyro.io.
+                If you have any questions about these Terms of Use, please contact us at 
+                <a href="mailto:0xklyro@gmail.com" className="text-indigo-400 hover:underline">0xklyro@gmail.com</a>.
               </p>
             </section>
           </div>
