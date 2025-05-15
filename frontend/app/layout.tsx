@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     default: siteConfig.name,
     template: `%s - ${siteConfig.name}`,
   },
-  metadataBase: new URL(siteConfig.url),
+  metadataBase: new URL(siteConfig.url || 'https://klyro.dev'),
   description: siteConfig.description,
   keywords: [
     "Klyro",
