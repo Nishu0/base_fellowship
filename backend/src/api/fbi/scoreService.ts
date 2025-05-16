@@ -849,7 +849,7 @@ export class ScoreService {
         web3Metrics.influenceBreakdown.tvl = {
             value: totalTVL,
             multiplier: multipliers.influence.tvlMultiplier,
-            worth: totalTVL * multipliers.influence.tvlMultiplier
+            worth: Math.min(totalTVL * multipliers.influence.tvlMultiplier, 50000)
         };
 
         web3Metrics.influenceBreakdown.uniqueUsers = {
