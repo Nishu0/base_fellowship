@@ -70,7 +70,9 @@ const formatTVL = (value: string | number): string => {
   if (isNaN(numValue) || numValue === 0) return "$0.00";
   
   // Format based on value size
-  if (numValue >= 1000000) {
+  if (numValue >= 1000000000000) {
+    return `$${(numValue / 1000000000000).toFixed(2)}T`;
+  } else if (numValue >= 1000000) {
     return `$${(numValue / 1000000).toFixed(2)}M`;
   } else if (numValue >= 1000) {
     return `$${(numValue / 1000).toFixed(2)}K`;
