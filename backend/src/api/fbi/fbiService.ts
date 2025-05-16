@@ -478,55 +478,54 @@ export class FbiService {
             // Get hackathon credentials for all addresses
             Logger.info('FbiService', `Getting hackathon credentials for all addresses for userId: ${user.id}`);
             const hackathonCredentialsPromises = request.addresses.map(address => 
-                OnchainDataManager.getHackathonCredentials(address)
+                OnchainDataManager.getHackerCredentials(address)
             );
             const hackathonResults = await Promise.all(hackathonCredentialsPromises);
+
+            console.log("hackathonResults", hackathonResults);
             
             // Combine hackathon results from all addresses
-            const partialCombinedData = hackathonResults.reduce((acc, curr) => ({
-                ethGlobalWins: acc.ethGlobalWins + (curr.totalWins || 0),
-                ethGlobalHacker: acc.ethGlobalHacker + (curr.totalHacker || 0),
-                HACKER: {
-                    count: acc.HACKER.count + (curr.HACKER?.count || 0),
-                    packs: { ...acc.HACKER.packs, ...curr.HACKER?.packs }
-                },
-                WINS: {
-                    count: acc.WINS.count + (curr.WINS?.count || 0),
-                    packs: { ...acc.WINS.packs, ...curr.WINS?.packs }
-                },
-                POAP_WINS: {
-                    count: (acc.POAP_WINS?.count || 0) + (curr.POAP_WINS?.count || 0),
-                    packs: { ...(acc.POAP_WINS?.packs || {}), ...(curr.POAP_WINS?.packs || {}) }
-                },
-                POAP_HACKER: {
-                    count: (acc.POAP_HACKER?.count || 0) + (curr.POAP_HACKER?.count || 0),
-                    packs: { ...(acc.POAP_HACKER?.packs || {}), ...(curr.POAP_HACKER?.packs || {}) }
-                },
-                totalPoaps: (acc.totalPoaps || 0) + (curr.totalPoaps || 0)
-            }), {
-                ethGlobalWins: 0,
-                ethGlobalHacker: 0,
-                HACKER: { count: 0, packs: {} },
-                WINS: { count: 0, packs: {} },
-                POAP_WINS: { count: 0, packs: {} },
-                POAP_HACKER: { count: 0, packs: {} },
+            const partialCombinedData = hackathonResults.reduce((acc, curr) => {
+                // Initialize combined packs for HACKER and WINS
+                const combinedHackerPacks = [...acc.HACKER.packs];
+                const combinedWinsPacks = [...acc.WINS.packs];
+                
+                // Merge current address packs into combined packs
+                if (curr.HACKER?.packs) {
+                    combinedHackerPacks.push(...curr.HACKER.packs);
+                }
+                
+                if (curr.WINS?.packs) {
+                    combinedWinsPacks.push(...curr.WINS.packs);
+                }
+                
+                return {
+                    HACKER: {
+                        count: acc.HACKER.count + (curr.HACKER?.count || 0),
+                        packs: combinedHackerPacks
+                    },
+                    WINS: {
+                        count: acc.WINS.count + (curr.WINS?.count || 0),
+                        packs: combinedWinsPacks
+                    },
+                    totalPoaps: (acc.totalPoaps || 0) + (curr.totalPoaps || 0)
+                };
+            }, {
+                HACKER: { count: 0, packs: [] },
+                WINS: { count: 0, packs: [] },
                 totalPoaps: 0
             });
             
             // Add calculated total values
             const combinedHackathonData = {
-                ...partialCombinedData,
-                totalWins: partialCombinedData.ethGlobalWins + partialCombinedData.POAP_WINS.count,
-                totalHacker: partialCombinedData.ethGlobalHacker + partialCombinedData.POAP_HACKER.count
+                ...partialCombinedData, 
+                totalWins: partialCombinedData.WINS.count,
+                totalHackerExperience: partialCombinedData.HACKER.count
             };
 
             Logger.info('FbiService', `Combined hackathon data summary for user: ${user.id}`, {
-                ethGlobalWins: combinedHackathonData.WINS.count,
-                ethGlobalHacker: combinedHackathonData.HACKER.count,
-                poapWins: combinedHackathonData.POAP_WINS.count,
-                poapHacker: combinedHackathonData.POAP_HACKER.count,
                 totalWins: combinedHackathonData.totalWins,
-                totalHacker: combinedHackathonData.totalHacker,
+                totalHackerExperience: combinedHackathonData.totalHackerExperience,
                 totalPoaps: combinedHackathonData.totalPoaps
             });
 

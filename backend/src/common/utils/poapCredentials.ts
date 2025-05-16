@@ -166,26 +166,19 @@ export async function fetchPOAPs(address: string, limit: number = 100, offset: n
 export function categorizePOAPs(poaps: POAP[]) {
     const hackathonWins: {
         count: number;
-        packs: Record<string, { name: string; image_url: string }>;
+        results: any[];
     } = {
         count: 0,
-        packs: {}
+        results: []
     };
     
     const hackerExperience: {
         count: number;
-        packs: Record<string, { name: string; image_url: string }>;
+        results: any[];
     } = {
         count: 0,
-        packs: {}
+        results: []
     };
-
-    // Keywords that indicate a hackathon or hacking event
-    const hackathonKeywords = [
-        'hackathon', 'hacker', 'ethglobal', 'hack', 'eth global', 
-        'devcon', 'devconnect', 'builder', 'developer', 'buildathon',
-        'summit', 'conference', 'dao hack', 'web3', 'web3jam'
-    ];
     
     // Keywords that specifically indicate a win
     const winKeywords = [
@@ -195,30 +188,27 @@ export function categorizePOAPs(poaps: POAP[]) {
 
     for (const poap of poaps) {
         const name = poap.drop.name.toLowerCase();
-        const isHackathonRelated = hackathonKeywords.some(keyword => name.includes(keyword));
+        const isWin = winKeywords.some(keyword => name.includes(keyword));
         
-        if (isHackathonRelated) {
-            const isWin = winKeywords.some(keyword => name.includes(keyword));
-            
-            if (isWin) {
-                hackathonWins.count++;
-                hackathonWins.packs[poap.drop.id.toString()] = {
-                    name: poap.drop.name,
-                    image_url: poap.drop.image_url
-                };
-            } else {
-                hackerExperience.count++;
-                hackerExperience.packs[poap.drop.id.toString()] = {
-                    name: poap.drop.name,
-                    image_url: poap.drop.image_url
-                };
-            }
+        if (isWin) {
+            hackathonWins.count++;
+            hackathonWins.results.push({
+                name: poap.drop.name,
+                imageUrl: poap.drop.image_url
+            });
         }
+        
+        // Add all POAPs to hacker experience by default
+        hackerExperience.count++;
+        hackerExperience.results.push({
+            name: poap.drop.name,
+            imageUrl: poap.drop.image_url
+        });
     }
 
     return {
-        wins: hackathonWins,
-        experience: hackerExperience
+        hackathonWins: hackathonWins,
+        hackerExperience: hackerExperience
     };
 }
 
@@ -251,10 +241,10 @@ export async function getPOAPCredentials(address: string, maxPages: number = 3):
     const categorized = categorizePOAPs(allPoaps);
     
     return {
-        POAP_WINS: categorized.wins,
-        POAP_HACKER: categorized.experience,
-        totalPoapWins: categorized.wins.count,
-        totalPoapHacker: categorized.experience.count,
+        hackathonWins: categorized.hackathonWins,
+        hackathonWinsCount: categorized.hackathonWins.count,
+        hackerExperience: categorized.hackerExperience,
+        hackerExperienceCount: categorized.hackerExperience.count,
         totalPoaps: allPoaps.length
     };
 } 

@@ -36,7 +36,7 @@ const finalistPacks = {
  * This version uses our enhanced Alchemy provider with fallbacks
  */
 async function checkPackBalances(walletAddress: string, packs: Record<string, string>) {
-    const results: { [key: string]: boolean } = {};
+    const results: any[] = [];
     let count = 0;
 
     // Create a map of contract address to pack name for reverse lookup
@@ -60,12 +60,18 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
             const ownedNfts = nfts.ownedNfts.filter(nft => 
                 contractAddresses.has(nft.contract.address.toLowerCase())
             );
+
     
             // Update results based on owned NFTs
             for (const nft of ownedNfts) {
                 const packName = contractToPackName[nft.contract.address.toLowerCase()];
                 if (packName) {
-                    results[packName] = true;
+                    results.push(
+                      {
+                        packName: packName,
+                        imageUrl: nft.image.originalUrl
+                      }
+                    )
                     count++;
                 }
             }
@@ -81,7 +87,26 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
                         const balance = await checkNFTBalance(provider, contractAddress, ownerAddr);
                         
                         if (balance > 0) {
-                            results[packName] = true;
+                            // Try to get NFT metadata including image
+                            let imageUrl = '';
+                            try {
+                                // Get token ID of first owned NFT
+                                const nftsForContract = await provider.nft.getNftsForOwner(
+                                    walletAddress,
+                                    { contractAddresses: [contractAddress] }
+                                );
+                                
+                                if (nftsForContract.ownedNfts.length > 0) {
+                                    imageUrl = nftsForContract.ownedNfts[0].image?.originalUrl || '';
+                                }
+                            } catch (metadataErr) {
+                                console.error(`Failed to fetch NFT metadata for ${packName}:`, metadataErr);
+                            }
+                            
+                            results.push({
+                                packName: packName,
+                                imageUrl: imageUrl
+                            });
                             count++;
                         }
                     } catch (err) {
@@ -130,7 +155,7 @@ export const checkCommunityPacks = async (walletAddress: string) => {
     } catch (error) {
         console.error("Error checking community packs:", error);
         // Return empty results instead of failing
-        return { results: {}, count: 0 };
+        return { results: [], count: 0 };
     }
 };
 
@@ -139,11 +164,13 @@ export const checkCommunityPacks = async (walletAddress: string) => {
  */
 export const checkFinalistPacks = async (walletAddress: string) => {
     try {
-        return await checkPackBalances(walletAddress, finalistPacks);
+        const data = await checkPackBalances(walletAddress, finalistPacks);
+        console.log("Finalist packs checked for", walletAddress, "with results", data.results);
+        return data;
     } catch (error) {
         console.error("Error checking finalist packs:", error);
         // Return empty results instead of failing
-        return { results: {}, count: 0 };
+        return { results: [], count: 0 };
     }
 };
 
