@@ -37,8 +37,25 @@ export class FbiService {
             const scoreNeedsProcessing = !userScore;
             const worthNeedsProcessing = !developerWorth;
 
-            // If all are already completed, just update user and return
-            if (!githubNeedsProcessing && !onchainNeedsProcessing && !scoreNeedsProcessing && !worthNeedsProcessing) {
+            // Check if data is older than 24 hours
+            const now = new Date();
+            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            
+            // Check if any data needs to be refreshed due to being older than 24 hours
+            const githubNeedsRefresh = githubData?.lastFetchedAt && new Date(githubData.lastFetchedAt) < twentyFourHoursAgo;
+            const contractsNeedsRefresh = contractsData?.lastFetchedAt && new Date(contractsData.lastFetchedAt) < twentyFourHoursAgo;
+            const onchainNeedsRefresh = onchainData?.lastFetchedAt && new Date(onchainData.lastFetchedAt) < twentyFourHoursAgo;
+            
+            // Combine initial processing needs with refresh needs
+            const shouldProcessGithub = githubNeedsProcessing || githubNeedsRefresh;
+            const shouldProcessOnchain = onchainNeedsProcessing || contractsNeedsRefresh || onchainNeedsRefresh;
+            
+            // If any source data (GitHub or onchain) needs processing/refreshing, we need to recalculate scores
+            const shouldProcessScore = scoreNeedsProcessing || shouldProcessGithub || shouldProcessOnchain;
+            const shouldProcessWorth = worthNeedsProcessing || shouldProcessGithub || shouldProcessOnchain;
+
+            // If all data is complete and recent (less than 24 hours old), just update user and return
+            if (!shouldProcessGithub && !shouldProcessOnchain && !shouldProcessScore && !shouldProcessWorth) {
                 await prisma.user.update({
                     where: { id: user.id },
                     data: {
@@ -46,15 +63,15 @@ export class FbiService {
                         dataStatus: DataStatus.COMPLETED
                     }
                 });
-                Logger.info('FbiService', `All data already completed for user: ${user.id}. Skipping processing.`);
+                Logger.info('FbiService', `All data already completed for user: ${user.id} and is less than 24 hours old. Skipping processing.`);
                 return;
             }
 
-            Logger.info('FbiService', `User found: ${user.id}. Processing only missing/incomplete data.`);
-            // Process only the missing/incomplete data in parallel
+            Logger.info('FbiService', `User found: ${user.id}. Processing missing/incomplete/outdated data.`);
+            // Process missing, incomplete, or outdated data in parallel
             const processPromises = [];
-            if (githubNeedsProcessing) processPromises.push(this.processGithubData(request.githubUsername, user.id));
-            if (onchainNeedsProcessing) {
+            if (shouldProcessGithub) processPromises.push(this.processGithubData(request.githubUsername, user.id));
+            if (shouldProcessOnchain) {
                 processPromises.push(this.extractOnchainData(request, user));
                 processPromises.push(this.extractHackathonData(request, user));
             }
@@ -63,8 +80,8 @@ export class FbiService {
             Logger.info('FbiService', `GitHub and onchain data processed for user: ${user.id}. Calculating scores if needed.`);
             // Calculate user score and developer worth if needed
             const scorePromises = [];
-            if (scoreNeedsProcessing) scorePromises.push(scoreService.calculateUserScore(user.id));
-            if (worthNeedsProcessing) scorePromises.push(scoreService.calculateDeveloperWorth(user.id));
+            if (shouldProcessScore) scorePromises.push(scoreService.calculateUserScore(user.id));
+            if (shouldProcessWorth) scorePromises.push(scoreService.calculateDeveloperWorth(user.id));
             await Promise.all(scorePromises);
 
             Logger.info('FbiService', `Scores calculated for user: ${user.id}. Checking all service statuses.`);

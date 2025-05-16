@@ -323,13 +323,13 @@ export class ScoreService {
         // 2. Contract Stats (10 points total)
         const contracts = user.contractsData?.contracts as any;
         let totalTVL = 0;
-        let uniqueUsers = new Set();
+        let uniqueUsers = 0;
 
         // Calculate TVL and unique users across all contracts
         Object.values(contracts || {}).forEach((chainContracts: any) => {
             chainContracts.forEach((contract: any) => {
                     totalTVL += Number(contract.tvl || 0);
-                    uniqueUsers.add(contract.uniqueUsers);
+                    uniqueUsers += Number(contract.uniqueUsers || 0);
             });
         });
 
@@ -343,9 +343,9 @@ export class ScoreService {
         };
 
         // Unique Users
-        const uniqueUsersScore = Math.min(uniqueUsers.size / thresholds.uniqueUsers, 1) * weights.uniqueUsers;
+        const uniqueUsersScore = Math.min(uniqueUsers/ thresholds.uniqueUsers, 1) * weights.uniqueUsers;
         web3Metrics.uniqueUsers = {
-            value: uniqueUsers.size,
+            value: uniqueUsers,
             threshold: thresholds.uniqueUsers,
             weight: weights.uniqueUsers,
             score: uniqueUsersScore
@@ -832,12 +832,12 @@ export class ScoreService {
         // 3. Influence Value
         const contracts = user.contractsData?.contracts as any;
         let totalTVL = 0;
-        let uniqueUsers = new Set();
+        let uniqueUsers = 0;
 
         Object.values(contracts || {}).forEach((chainContracts: any) => {
             chainContracts.forEach((contract: any) => {
                 totalTVL += Number(contract.tvl || 0);
-                uniqueUsers.add(contract.uniqueUsers);
+                uniqueUsers += Number(contract.uniqueUsers || 0);
             });
         });
 
@@ -853,9 +853,9 @@ export class ScoreService {
         };
 
         web3Metrics.influenceBreakdown.uniqueUsers = {
-            value: uniqueUsers.size,
+            value: uniqueUsers,     
             multiplier: multipliers.influence.uniqueUser,
-            worth: uniqueUsers.size * multipliers.influence.uniqueUser
+            worth: uniqueUsers * multipliers.influence.uniqueUser
         };
 
         web3Metrics.influenceBreakdown.transactions = {
