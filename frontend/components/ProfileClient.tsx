@@ -761,8 +761,8 @@ console.log("userData",userData);
         <div className="text-center p-6 bg-zinc-900 rounded-lg max-w-md">
           <h2 className="text-xl font-bold mb-4">Error Loading Profile</h2>
           <p className="text-zinc-400 mb-6">{error || "User data not available"}</p>
-          <Link href="/user">
-            <Button variant="outline">Back to Users</Button>
+          <Link href="/">
+            <Button variant="outline">Back to Home</Button>
           </Link>
         </div>
       </div>
