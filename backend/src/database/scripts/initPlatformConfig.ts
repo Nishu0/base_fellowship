@@ -9,34 +9,34 @@ const defaultConfig = {
     thresholds: {
         // Web3 thresholds
         mainnetContracts: 5,
-        testnetContracts: 20,
+        testnetContracts: 10,
         mainnetTVL: 1000, // 1000
-        uniqueUsers: 100,
+        uniqueUsers: 50,
         transactions: 3000,
         web3Languages: 10000000,
         cryptoRepoContributions: 5,
-        hackathonWins: 5,
+        hackathonWins: 2,
 
         // Web2 thresholds
         prs: 50,
-        contributions: 10634,
-        forks: 500,
-        stars: 500,
+        contributions: 200,
+        forks: 200,
+        stars: 200,
         issues: 10,
-        totalLinesOfCode: 146639660,
+        totalLinesOfCode: 26639660,
         accountAge: 4998, //  year in days
-        followers: 500
+        followers: 200
     },
     weights: {
         // Web3 weights
-        mainnetContracts: 11,
-        testnetContracts: 9,
-        mainnetTVL: 5,
-        uniqueUsers: 5,
-        transactions: 20,
-        web3Languages: 20,
-        cryptoRepoContributions: 15,
-        hackathonWins: 15,
+        mainnetContracts: 5,
+        testnetContracts: 3,
+        mainnetTVL: 3,
+        uniqueUsers: 3,
+        transactions: 42,
+        web3Languages: 24,
+        cryptoRepoContributions: 10,
+        hackathonWins: 10,
 
         // Web2 weights
         prs: 10,
