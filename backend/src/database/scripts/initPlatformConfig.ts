@@ -10,7 +10,7 @@ const defaultConfig = {
         // Web3 thresholds
         mainnetContracts: 5,
         testnetContracts: 10,
-        mainnetTVL: 1000, // 1000
+        mainnetTVL: 200, // 1000
         uniqueUsers: 50,
         transactions: 3000,
         web3Languages: 10000000,
@@ -18,14 +18,14 @@ const defaultConfig = {
         hackathonWins: 2,
 
         // Web2 thresholds
-        prs: 50,
+        prs: 25,
         contributions: 200,
         forks: 200,
         stars: 200,
         issues: 10,
         totalLinesOfCode: 26639660,
         accountAge: 4998, //  year in days
-        followers: 200
+        followers: 100
     },
     weights: {
         // Web3 weights
@@ -39,11 +39,11 @@ const defaultConfig = {
         hackathonWins: 10,
 
         // Web2 weights
-        prs: 10,
+        prs: 15,
         contributions: 10,
         forks: 10,
         stars: 10,
-        issues: 10,
+        issues: 5,
         totalLinesOfCode: 20,
         accountAge: 10,
         followers: 10
