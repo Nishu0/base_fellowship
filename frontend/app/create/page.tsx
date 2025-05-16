@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle, X, Github, Wallet, Twitter, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/axiosClient";
+import { isAddress } from "ethers";
 import {
   Dialog,
   DialogContent,
@@ -33,8 +34,25 @@ interface StatusResponse {
   };
 }
 
+// Helper function to validate wallet addresses or ENS names
+const isValidAddress = (address: string): boolean => {
+  if (!address) return true; // Empty is allowed as only first is required
+  
+  // Check if it's a valid Ethereum address
+  if (isAddress(address)) return true;
+  
+  const addressStr = address as string; // Explicitly type as string
+  if (addressStr.endsWith('.eth') || addressStr.endsWith('.base.eth')) {
+    const parts = addressStr.split('.');
+    // Basic validation - ensure there's something before .eth
+    return parts[0].length > 0;
+  }
+  
+  return false;
+};
+
 export default function UserDataForm() {
-  const [wallets, setWallets] = useState([{ id: 1, address: "" }]);
+  const [wallets, setWallets] = useState([{ id: 1, address: "", isValid: true }]);
   const [githubUsername, setGithubUsername] = useState("");
   const [twitterUsername, setTwitterUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +71,7 @@ export default function UserDataForm() {
 
   const addWallet = () => {
     if (wallets.length < 3) {
-      setWallets([...wallets, { id: Date.now(), address: "" }]);
+      setWallets([...wallets, { id: Date.now(), address: "", isValid: true }]);
     }
   };
 
@@ -65,7 +83,7 @@ export default function UserDataForm() {
 
   const updateWallet = (id: number, address: string) => {
     setWallets(wallets.map(wallet => 
-      wallet.id === id ? { ...wallet, address } : wallet
+      wallet.id === id ? { ...wallet, address, isValid: isValidAddress(address) } : wallet
     ));
   };
 
@@ -97,6 +115,23 @@ export default function UserDataForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all wallet addresses
+    const allValid = wallets.every(wallet => {
+      // Skip empty addresses except the first one
+      if (!wallet.address && wallets.indexOf(wallet) > 0) return true;
+      return isValidAddress(wallet.address);
+    });
+    
+    if (!allValid) {
+      // Update validity status for all wallets
+      setWallets(wallets.map(wallet => ({
+        ...wallet,
+        isValid: isValidAddress(wallet.address)
+      })));
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -180,28 +215,36 @@ export default function UserDataForm() {
               <Label className="flex items-center gap-2">
                 <Wallet size={16} className="text-zinc-400" />
                 Wallet Addresses <span className="text-red-500">*</span>
+                <span className="text-xs text-zinc-500 ml-1">(Ethereum address, ENS or Base ENS)</span>
               </Label>
               
               {wallets.map((wallet, index) => (
-                <div key={wallet.id} className="flex items-center gap-2">
-                  <Input
-                    type="text"
-                    value={wallet.address}
-                    onChange={(e) => updateWallet(wallet.id, e.target.value)}
-                    placeholder={`Wallet address ${index + 1}`}
-                    className="bg-zinc-900/70 border-zinc-800 h-11 pl-3 focus:ring-blue-500 focus:border-blue-500"
-                    required={index === 0} // Only first wallet is required
-                  />
-                  {wallets.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeWallet(wallet.id)}
-                      className="h-10 w-10 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800"
-                    >
-                      <X size={16} />
-                    </Button>
+                <div key={wallet.id} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      value={wallet.address}
+                      onChange={(e) => updateWallet(wallet.id, e.target.value)}
+                      placeholder={`Wallet address ${index + 1}`}
+                      className={`bg-zinc-900/70 border-zinc-800 h-11 pl-3 focus:ring-blue-500 focus:border-blue-500 ${!wallet.isValid ? 'border-red-500' : ''}`}
+                      required={index === 0} // Only first wallet is required
+                    />
+                    {wallets.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeWallet(wallet.id)}
+                        className="h-10 w-10 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800"
+                      >
+                        <X size={16} />
+                      </Button>
+                    )}
+                  </div>
+                  {!wallet.isValid && (
+                    <p className="text-red-500 text-xs pl-1">
+                      Please enter a valid Ethereum address, ENS domain (.eth) or Base ENS domain (.base.eth)
+                    </p>
                   )}
                 </div>
               ))}
@@ -267,7 +310,7 @@ export default function UserDataForm() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md bg-zinc-950 border border-zinc-800 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Building your profile</DialogTitle>
+            <DialogTitle className="text-xl font-semibold mb-2">Building your profile</DialogTitle>
             <DialogDescription className="text-zinc-400">
               We're analyzing your GitHub data and on-chain activity
             </DialogDescription>
