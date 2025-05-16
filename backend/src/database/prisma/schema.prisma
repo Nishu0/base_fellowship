@@ -83,6 +83,7 @@ model UserScore {
   totalScore Float @default(0)
   metrics Json // Stores individual metric scores and calculations
   status DataStatus @default(PENDING)
+  lastScore Float? @default(0)
   lastCalculatedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,6 +108,7 @@ model DeveloperWorth {
     totalWorth      Float
     breakdown       Json
     details         Json
+    lastWorth Float? @default(0)
     lastCalculatedAt DateTime
     createdAt       DateTime @default(now())
     updatedAt       DateTime @updatedAt

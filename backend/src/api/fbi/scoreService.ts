@@ -177,7 +177,8 @@ export class ScoreService {
                 include: {
                     githubData: true,
                     contractsData: true,
-                    onchainData: true
+                    onchainData: true,
+                    userScore: true
                 }
             });
 
@@ -209,6 +210,9 @@ export class ScoreService {
             // Calculate total score (50% Web3 + 50% Web2)
             const totalScore = (web3Score + web2Score) / 2;
 
+            // Get the previous score if it exists
+            const lastScore = user.userScore?.totalScore || 0;
+
             // Update or create user score
             await prisma.userScore.upsert({
                 where: { userId },
@@ -217,12 +221,14 @@ export class ScoreService {
                     totalScore,
                     metrics,
                     status: DataStatus.COMPLETED,
+                    lastScore,
                     lastCalculatedAt: new Date()
                 },
                 update: {
                     totalScore,
                     metrics,
                     status: DataStatus.COMPLETED,
+                    lastScore,
                     lastCalculatedAt: new Date()
                 }
             });
@@ -544,7 +550,8 @@ export class ScoreService {
                 include: {
                     githubData: true,
                     contractsData: true,
-                    onchainData: true
+                    onchainData: true,
+                    developerWorth: true
                 }
             });
 
@@ -558,6 +565,9 @@ export class ScoreService {
 
             // Calculate total worth
             const totalWorth = web3Worth.totalWorth + web2Worth.totalWorth;
+
+            // Get the previous worth if it exists
+            const lastWorth = user.developerWorth?.totalWorth || 0;
 
             // Store detailed metrics
             const detailedMetrics = {
@@ -600,12 +610,14 @@ export class ScoreService {
                     totalWorth,
                     breakdown: detailedMetrics,
                     details: detailedMetrics, // Store full details here
+                    lastWorth,
                     lastCalculatedAt: new Date()
                 },
                 update: {
                     totalWorth,
                     breakdown: detailedMetrics,
                     details: detailedMetrics, // Store full details here
+                    lastWorth,
                     lastCalculatedAt: new Date()
                 }
             });
