@@ -160,7 +160,7 @@ export default function UserDataForm() {
             <div className="space-y-2">
               <Label htmlFor="github" className="flex items-center gap-2">
                 <Github size={16} className="text-zinc-400" />
-                GitHub Username <span className="text-red-500">*</span>
+                GitHub Username Only <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <Input
