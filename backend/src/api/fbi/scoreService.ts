@@ -130,6 +130,7 @@ const DEFAULT_THRESHOLDS = {
     web3Languages: 10000,
     cryptoRepoContributions: 50,
     hackathonWins: 10,
+    hackerExperience: 10,
 
     // Web2 thresholds
     prs: 20,
@@ -153,6 +154,7 @@ const DEFAULT_WEIGHTS = {
     web3Languages: 20,
     cryptoRepoContributions: 15,
     hackathonWins: 15,
+    hackerExperience: 5,
 
     // Web2 weights
     prs: 10,
@@ -175,7 +177,8 @@ export class ScoreService {
                 include: {
                     githubData: true,
                     contractsData: true,
-                    onchainData: true
+                    onchainData: true,
+                    userScore: true
                 }
             });
 
@@ -207,6 +210,9 @@ export class ScoreService {
             // Calculate total score (50% Web3 + 50% Web2)
             const totalScore = (web3Score + web2Score) / 2;
 
+            // Get the previous score if it exists
+            const lastScore = user.userScore?.totalScore || 0;
+
             // Update or create user score
             await prisma.userScore.upsert({
                 where: { userId },
@@ -215,12 +221,14 @@ export class ScoreService {
                     totalScore,
                     metrics,
                     status: DataStatus.COMPLETED,
+                    lastScore,
                     lastCalculatedAt: new Date()
                 },
                 update: {
                     totalScore,
                     metrics,
                     status: DataStatus.COMPLETED,
+                    lastScore,
                     lastCalculatedAt: new Date()
                 }
             });
@@ -282,18 +290,17 @@ export class ScoreService {
         });
 
         const hackathonData = onchainData?.hackathonData as any;
-        const totalWins = (hackathonData?.totalWins || 0) + (hackathonData?.POAP_WINS?.count || 0);
-
-        // Calculate hackathon score
-        const hackathonScore = Math.min(totalWins / thresholds.hackathonWins, 1) * weights.hackathonWins;
-        web3Metrics.hackathonWins = {
-            value: totalWins,
-            threshold: thresholds.hackathonWins,
-            weight: weights.hackathonWins,
-            score: hackathonScore,
+        
+        // Calculate hacker experience score (HACKER category POAPs)
+        const totalHackerExperience = hackathonData?.HACKER?.count || 0;
+        const hackerExperienceScore = Math.min(totalHackerExperience / thresholds.hackerExperience, 1) * weights.hackerExperience;
+        web3Metrics.hackerExperience = {
+            value: totalHackerExperience,
+            threshold: thresholds.hackerExperience,
+            weight: weights.hackerExperience,
+            score: hackerExperienceScore,
             details: {
-                ethGlobalWins: hackathonData?.WINS || { count: 0, packs: {} },
-                poapWins: hackathonData?.POAP_WINS || { count: 0, packs: {} }
+                totalHackerExperience: totalHackerExperience
             }
         };
 
@@ -543,7 +550,8 @@ export class ScoreService {
                 include: {
                     githubData: true,
                     contractsData: true,
-                    onchainData: true
+                    onchainData: true,
+                    developerWorth: true
                 }
             });
 
@@ -558,12 +566,18 @@ export class ScoreService {
             // Calculate total worth
             const totalWorth = web3Worth.totalWorth + web2Worth.totalWorth;
 
+            // Get the previous worth if it exists
+            const lastWorth = user.developerWorth?.totalWorth || 0;
+
             // Store detailed metrics
             const detailedMetrics = {
                 web3: {
                     mainnetContracts: web3Worth.web3Metrics.experienceBreakdown.mainnetContracts,
                     testnetContracts: web3Worth.web3Metrics.experienceBreakdown.testnetContracts,
                     cryptoRepoContributions: web3Worth.web3Metrics.experienceBreakdown.cryptoRepoContributions,
+                    hackathonWins: web3Worth.web3Metrics.experienceBreakdown.hackathonWins,
+                    hackerExperience: web3Worth.web3Metrics.experienceBreakdown.hackerExperience,
+                    wins: web3Worth.web3Metrics.experienceBreakdown.wins,
                     languages: {
                         solidity: web3Worth.web3Metrics.skillBreakdown.solidity,
                         rust: web3Worth.web3Metrics.skillBreakdown.rust,
@@ -596,12 +610,14 @@ export class ScoreService {
                     totalWorth,
                     breakdown: detailedMetrics,
                     details: detailedMetrics, // Store full details here
+                    lastWorth,
                     lastCalculatedAt: new Date()
                 },
                 update: {
                     totalWorth,
                     breakdown: detailedMetrics,
                     details: detailedMetrics, // Store full details here
+                    lastWorth,
                     lastCalculatedAt: new Date()
                 }
             });
@@ -639,8 +655,15 @@ export class ScoreService {
                     multiplier: 0,
                     worth: 0,
                     details: {
-                        ethGlobalWins: 0,
-                        poapWins: 0
+                        totalHackathonWins: 0
+                    }
+                },
+                hackerExperience: {
+                    value: 0,
+                    multiplier: 0,
+                    worth: 0,
+                    details: {
+                        totalHackerExperience: 0
                     }
                 }
             },
@@ -706,7 +729,8 @@ export class ScoreService {
                 mainnetContract: 2000,
                 testnetContract: 500,
                 cryptoRepoContribution: 200,
-                hackathonWin: 1000
+                hackathonWin: 1000,
+                hackerExperience: 100
             },
             skill: {
                 solidity: 0.02,
@@ -740,23 +764,32 @@ export class ScoreService {
             worth: testnetContracts * multipliers.experience.testnetContract
         };
 
-        // Add hackathon wins
+        // Get hackathon data
         const onchainData = await prisma.onchainData.findUnique({
             where: { userId: user.id }
         });
-        
-        const hackathonData = onchainData?.hackathonData as any;
-        const ethGlobalWins = hackathonData?.WINS?.count || 0;
-        const poapWins = hackathonData?.POAP_WINS?.count || 0;
-        const totalHackathonWins = ethGlobalWins + poapWins;
 
-        web3Metrics.experienceBreakdown.hackathonWins = {
-            value: totalHackathonWins,
-            multiplier: multipliers.experience.hackathonWin || 1000,
-            worth: totalHackathonWins * (multipliers.experience.hackathonWin || 1000),
+        const hackathonData = onchainData?.hackathonData as any;
+
+        // Add hacker experience - specific HACKER category POAPs
+        const totalHackerExperience = hackathonData?.HACKER?.count || 0;
+        web3Metrics.experienceBreakdown.hackerExperience = {
+            value: totalHackerExperience,
+            multiplier: multipliers.experience.hackerExperience || 100,
+            worth: totalHackerExperience * (multipliers.experience.hackerExperience || 100),
             details: {
-                ethGlobalWins,
-                poapWins
+                totalHackerExperience: totalHackerExperience
+            }
+        };
+
+        // Add specific WINS category POAPs for hackathon wins
+        const winsTotal = hackathonData?.WINS?.count || 0;
+        web3Metrics.experienceBreakdown.hackathonWins = {
+            value: winsTotal,
+            multiplier: multipliers.experience.hackathonWin || 1000,
+            worth: winsTotal * (multipliers.experience.hackathonWin || 1000),
+            details: {
+                totalHackathonWins: winsTotal
             }
         };
 
@@ -790,7 +823,8 @@ export class ScoreService {
             web3Metrics.experienceBreakdown.mainnetContracts.worth +
             web3Metrics.experienceBreakdown.testnetContracts.worth +
             web3Metrics.experienceBreakdown.cryptoRepoContributions.worth +
-            web3Metrics.experienceBreakdown.hackathonWins.worth;
+            web3Metrics.experienceBreakdown.hackathonWins.worth +
+            web3Metrics.experienceBreakdown.hackerExperience.worth;
 
         // 2. Skill Value
         if (githubData) {

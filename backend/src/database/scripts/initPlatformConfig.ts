@@ -16,7 +16,7 @@ const defaultConfig = {
         web3Languages: 10000000,
         cryptoRepoContributions: 5,
         hackathonWins: 2,
-
+        hackerExperience: 10,
         // Web2 thresholds
         prs: 25,
         contributions: 200,
@@ -33,14 +33,15 @@ const defaultConfig = {
         testnetContracts: 3,
         mainnetTVL: 3,
         uniqueUsers: 3,
-        transactions: 42,
+        transactions: 37,
         web3Languages: 24,
         cryptoRepoContributions: 10,
         hackathonWins: 10,
+        hackerExperience: 5,
 
         // Web2 weights
         prs: 15,
-        contributions: 10,
+        contributions: 20,
         forks: 10,
         stars: 10,
         issues: 5,
@@ -55,7 +56,9 @@ const defaultConfig = {
             experience: {
                 mainnetContract: 3000,    // Reduced from 5000
                 testnetContract: 2000,     // Reduced from 2000
-                cryptoRepoContribution: 100 // Reduced from 1000
+                cryptoRepoContribution: 100, // Reduced from 1000
+                hackathonWins: 200,
+                hackerExperience: 100
             },
             skill: {
                 solidity: 0.002,           // Reduced from 0.1

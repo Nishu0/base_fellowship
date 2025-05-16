@@ -8,6 +8,18 @@ interface PriceCache {
     timestamp: number;
 }
 
+interface HackerCredentialsResponse {
+    HACKER: {
+        count: number;
+        packs: any[];
+    };
+    WINS: {
+        count: number;
+        packs: any[];
+    };
+    totalPoaps: number;
+}
+
 export class OnchainDataManager {
     private alchemy: Alchemy;
     private network: Network;
@@ -510,7 +522,7 @@ export class OnchainDataManager {
         }
     }
 
-    static async getHackathonCredentials(address: string): Promise<any> {
+    static async getHackerCredentials(address: string): Promise<HackerCredentialsResponse> {
         console.log("Getting hackathon credentials for", address);
         
         // Run all checks in parallel
@@ -519,20 +531,21 @@ export class OnchainDataManager {
             checkFinalistPacks(address),
             getPOAPCredentials(address)
         ]);
-        
+
+        console.log("communityPacksResult", communityPacksResult);
+        console.log("finalistPacksResult", finalistPacksResult);
+        console.log("poapCredentials", poapCredentials);
+        console.log(poapCredentials.hackerExperience.results)
         return {
             HACKER: {
-                count: communityPacksResult.count,
-                packs: communityPacksResult.results
+                count: communityPacksResult.count + poapCredentials.hackerExperienceCount,
+                packs: [...communityPacksResult.results, ...poapCredentials.hackerExperience.results]
             },
             WINS: {
-                count: finalistPacksResult.count,
-                packs: finalistPacksResult.results
+                count: finalistPacksResult.count + poapCredentials.hackathonWinsCount,
+                packs: [...finalistPacksResult.results, ...poapCredentials.hackathonWins.results]
             },
-            POAP_WINS: poapCredentials.POAP_WINS,
-            POAP_HACKER: poapCredentials.POAP_HACKER,
-            totalWins: finalistPacksResult.count + poapCredentials.totalPoapWins,
-            totalHacker: communityPacksResult.count + poapCredentials.totalPoapHacker
+            totalPoaps: poapCredentials.totalPoaps
         };
     }
 
