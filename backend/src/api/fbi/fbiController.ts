@@ -30,7 +30,7 @@ export class FbiController {
             const resolvedAddresses = await Promise.all(
                 request.addresses.map(async (address) => {
                     // If it's already an address, return as is
-                    if (address.startsWith('0x')) {
+                    if (address.startsWith('0x') && !address.endsWith(".eth")) {
                         return address;
                     }
                     
@@ -64,6 +64,8 @@ export class FbiController {
 
             // Update request with resolved addresses
             request.addresses = resolvedAddresses.filter((address): address is string => address !== null);
+
+            Logger.info('FbiController', 'Resolved addresses', { addresses: request.addresses });
 
             Logger.info('FbiController', 'Checking if user exists', { githubUsername: request.githubUsername });
             // Check if user exists
