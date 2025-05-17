@@ -1,6 +1,7 @@
 export interface AnalyzeUserRequest {
     githubUsername: string;
     addresses: string[];
+    forceRefresh?: boolean;
 }
 
 export interface AnalyzeUserResponse {

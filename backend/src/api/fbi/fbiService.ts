@@ -13,9 +13,10 @@ const prisma = new PrismaClient();
 const scoreService = new ScoreService();
 
 export class FbiService {
-    async processUserData(request: AnalyzeUserRequest): Promise<void> {
+    async processUserData(request: AnalyzeUserRequest, forceRefresh: boolean = false): Promise<void> {
         try {
-            Logger.info('FbiService', `Starting processUserData for githubUsername: ${request.githubUsername}`);
+            Logger.info('FbiService', `Starting processUserData for githubUsername: ${request.githubUsername}`, 
+                { forceRefresh });
             const user = await prisma.user.findFirst({
                 where: { githubId: request.githubUsername }
             });
@@ -37,18 +38,30 @@ export class FbiService {
             const scoreNeedsProcessing = !userScore;
             const worthNeedsProcessing = !developerWorth;
 
-            // Check if data is older than 24 hours
-            const now = new Date();
-            const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            // If force refresh is true, we'll reprocess all data regardless of age
+            let shouldProcessGithub = githubNeedsProcessing;
+            let shouldProcessOnchain = onchainNeedsProcessing;
             
-            // Check if any data needs to be refreshed due to being older than 24 hours
-            const githubNeedsRefresh = githubData?.lastFetchedAt && new Date(githubData.lastFetchedAt) < twentyFourHoursAgo;
-            const contractsNeedsRefresh = contractsData?.lastFetchedAt && new Date(contractsData.lastFetchedAt) < twentyFourHoursAgo;
-            const onchainNeedsRefresh = onchainData?.lastFetchedAt && new Date(onchainData.lastFetchedAt) < twentyFourHoursAgo;
-            
-            // Combine initial processing needs with refresh needs
-            const shouldProcessGithub = githubNeedsProcessing || githubNeedsRefresh;
-            const shouldProcessOnchain = onchainNeedsProcessing || contractsNeedsRefresh || onchainNeedsRefresh;
+            if (!forceRefresh) {
+                // Standard age check only if not forcing refresh
+                // Check if data is older than 24 hours
+                const now = new Date();
+                const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                
+                // Check if any data needs to be refreshed due to being older than 24 hours
+                const githubNeedsRefresh = githubData?.lastFetchedAt ? new Date(githubData.lastFetchedAt) < twentyFourHoursAgo : false;
+                const contractsNeedsRefresh = contractsData?.lastFetchedAt ? new Date(contractsData.lastFetchedAt) < twentyFourHoursAgo : false;
+                const onchainNeedsRefresh = onchainData?.lastFetchedAt ? new Date(onchainData.lastFetchedAt) < twentyFourHoursAgo : false;
+                
+                // Combine initial processing needs with refresh needs
+                shouldProcessGithub = shouldProcessGithub || githubNeedsRefresh;
+                shouldProcessOnchain = shouldProcessOnchain || contractsNeedsRefresh || onchainNeedsRefresh;
+            } else {
+                // If force refresh, set all flags to true
+                shouldProcessGithub = true;
+                shouldProcessOnchain = true;
+                Logger.info('FbiService', `Force refresh enabled, will reprocess all data for user: ${user.id}`);
+            }
             
             // If any source data (GitHub or onchain) needs processing/refreshing, we need to recalculate scores
             const shouldProcessScore = scoreNeedsProcessing || shouldProcessGithub || shouldProcessOnchain;

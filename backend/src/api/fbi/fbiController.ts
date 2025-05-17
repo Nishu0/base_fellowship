@@ -291,7 +291,7 @@ export class FbiController {
         Logger.info('FbiController', 'getETHGlobalCredentials called', { params: req.params });
         try {
             const address = req.params.address;
-            const credentials = await OnchainDataManager.getHackathonCredentials(address);
+            const credentials = await OnchainDataManager.getHackerCredentials(address);
             Logger.info('FbiController', 'ETHGlobal credentials fetched', { address, credentials });
             res.status(200).json(credentials);
         } catch (error) {
@@ -444,6 +444,148 @@ export class FbiController {
             });
         } catch (error) {
             Logger.error('FbiController', 'Error in getOrganizationByName', { error });
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
+
+    async reprocessUser(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'reprocessUser called', { params: req.params });
+        try {
+            let { githubUsername } = req.params;
+            if (!githubUsername) {
+                res.status(400).json({
+                    success: false,
+                    error: "GitHub username is required"
+                });
+                return;
+            }
+            
+            githubUsername = githubUsername.toLowerCase();
+            
+            // Check if user exists
+            const user = await prisma.user.findFirst({
+                where: { githubId: githubUsername },
+                include: { wallets: true }
+            });
+
+            if (!user) {
+                Logger.warn('FbiController', 'User not found for reprocessing', { githubUsername });
+                res.status(404).json({
+                    success: false,
+                    error: "User not found"
+                });
+                return;
+            }
+
+            // Extract addresses from user's wallets
+            const addresses = user.wallets.map(wallet => wallet.address);
+            
+            if (addresses.length === 0) {
+                Logger.warn('FbiController', 'No wallet addresses found for user', { githubUsername });
+                res.status(400).json({
+                    success: false,
+                    error: "No wallet addresses found for this user"
+                });
+                return;
+            }
+
+            // Create analyze request
+            const request: AnalyzeUserRequest = {
+                githubUsername,
+                addresses,
+                forceRefresh: true
+            };
+
+            // Reset data status to PENDING for this user
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { dataStatus: DataStatus.PENDING }
+            });
+
+            // Add to processing queue
+            await analyzeQueue.addToQueue(request);
+            
+            Logger.info('FbiController', 'User added to reprocessing queue', { githubUsername });
+            
+            res.status(202).json({
+                success: true,
+                data: {
+                    message: "User added to reprocessing queue",
+                    status: "PENDING"
+                }
+            });
+        } catch (error) {
+            Logger.error('FbiController', 'Error in reprocessUser', { error });
+            res.status(500).json({
+                success: false,
+                error: error instanceof Error ? error.message : 'Internal server error'
+            });
+        }
+    }
+
+    async reprocessAllUsers(req: Request, res: Response): Promise<void> {
+        Logger.info('FbiController', 'reprocessAllUsers called');
+        try {
+            // Get all users with completed data
+            const users = await prisma.user.findMany({
+                include: { wallets: true }
+            });
+
+            if (users.length === 0) {
+                Logger.warn('FbiController', 'No users found for reprocessing');
+                res.status(404).json({
+                    success: false,
+                    error: "No users found"
+                });
+                return;
+            }
+
+            // Count of users with addresses
+            let usersProcessed = 0;
+
+            // Process each user
+            for (const user of users) {
+                const addresses = user.wallets.map(wallet => wallet.address);
+                
+                // Skip users with no addresses
+                if (addresses.length === 0) {
+                    Logger.warn('FbiController', 'Skipping user with no wallet addresses', { githubUsername: user.githubId });
+                    continue;
+                }
+
+                // Create analyze request
+                const request: AnalyzeUserRequest = {
+                    githubUsername: user.githubId,
+                    addresses,
+                    forceRefresh: true
+                };
+
+                // Reset data status to PENDING
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { dataStatus: DataStatus.PENDING }
+                });
+
+                // Add to processing queue
+                await analyzeQueue.addToQueue(request);
+                usersProcessed++;
+                
+                Logger.info('FbiController', 'User added to reprocessing queue', { githubUsername: user.githubId });
+            }
+
+            res.status(202).json({
+                success: true,
+                data: {
+                    message: `${usersProcessed} users added to reprocessing queue`,
+                    totalUsers: users.length,
+                    usersProcessed
+                }
+            });
+        } catch (error) {
+            Logger.error('FbiController', 'Error in reprocessAllUsers', { error });
             res.status(500).json({
                 success: false,
                 error: error instanceof Error ? error.message : 'Internal server error'

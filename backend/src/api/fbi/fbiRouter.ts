@@ -11,5 +11,7 @@ router.get('/users/leaderboard', fbiController.getAllUsersByScore.bind(fbiContro
 router.post('/organizations', fbiController.createOrganization.bind(fbiController));
 router.get('/organizations', fbiController.getAllOrganizations.bind(fbiController));
 router.get('/organizations/:name', fbiController.getOrganizationByName.bind(fbiController));
+router.post('/reprocess-user/:githubUsername', fbiController.reprocessUser.bind(fbiController));
+router.post('/reprocess-all-users', fbiController.reprocessAllUsers.bind(fbiController));
 
 export default router; 

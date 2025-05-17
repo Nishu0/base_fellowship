@@ -25,8 +25,9 @@ const fbiService = new FbiService()
 const analyzeQueueJobProcessor = async (job: Job) => {
     try {
         Logger.info('AnalyzeQueue', `Processing job`, { jobId: job.id, data: job.data });
-        const data = job.data
-        await fbiService.processUserData(data)
+        const data = job.data;
+        const forceRefresh = data.forceRefresh || false;
+        await fbiService.processUserData(data, forceRefresh);
         Logger.info('AnalyzeQueue', `Successfully processed job`, { jobId: job.id });
         return { success: true }
     } catch (error) {
