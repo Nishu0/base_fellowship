@@ -66,12 +66,22 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
             for (const nft of ownedNfts) {
                 const packName = contractToPackName[nft.contract.address.toLowerCase()];
                 if (packName) {
-                    results.push(
-                      {
-                        packName: packName,
-                        imageUrl: nft.image.originalUrl
-                      }
-                    )
+                    if(packName === "ETHGlobal Singapore 2025 Finalist"){
+                        results.push(
+                            {
+                              name: packName,
+                              imageUrl: "https://ethglobal.b-cdn.net/packs/singapore2024-finalist/logo/default.jpg"
+                            }
+                          )
+                    }else{
+                        results.push(
+                            {
+                              name: packName,
+                              imageUrl: nft.image.originalUrl
+                            }
+                          )
+                    }
+                    
                     count++;
                 }
             }
@@ -102,11 +112,20 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
                             } catch (metadataErr) {
                                 console.error(`Failed to fetch NFT metadata for ${packName}:`, metadataErr);
                             }
-                            
-                            results.push({
-                                packName: packName,
-                                imageUrl: imageUrl
-                            });
+
+
+                            if(packName === "ETHGlobal Singapore 2025 Finalist"){
+                                results.push({
+                                    name: packName,
+                                    imageUrl: "https://ethglobal.b-cdn.net/packs/singapore2024-finalist/logo/default.jpg"
+                                });
+                            }else{
+                                results.push({
+                                    name: packName,
+                                    imageUrl: imageUrl
+                                });
+                            }
+                                         
                             count++;
                         }
                     } catch (err) {
