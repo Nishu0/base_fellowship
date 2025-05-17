@@ -38,7 +38,9 @@ import {
   Copy,
   Check,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  ChevronLeft,
+  Award
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/axiosClient";
@@ -234,6 +236,10 @@ export default function ProfileClient({username}: {username: string}) {
       };
       totalWins: number;
       totalHacker: number;
+      POAP_HACKER?: {
+        count: number;
+        packs: Record<string, any>;
+      };
     };
   }
 
@@ -250,6 +256,10 @@ export default function ProfileClient({username}: {username: string}) {
   // Heatmap states - closed by default in overview, open in dedicated tabs
   const [isGithubHeatmapOpen, setIsGithubHeatmapOpen] = useState(false);
   const [isOnchainHeatmapOpen, setIsOnchainHeatmapOpen] = useState(false);
+  
+  // Inside the ProfileClient component, add poapPage state for pagination
+  const [poapPage, setPoapPage] = useState(1);
+  const poapsPerPage = 9;
   
   // Update the heatmap states when tab changes
   useEffect(() => {
@@ -1171,6 +1181,13 @@ console.log("userData",userData);
                 >
                   Skills
                 </Button>
+                <Button 
+                  variant={activeTab === "poaps" ? "default" : "ghost"} 
+                  onClick={() => setActiveTab("poaps")}
+                  className={`rounded-full px-6 ${activeTab === "poaps" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
+                >
+                  POAPs
+                </Button>
               </div>
               
               {/* Tab content */}
@@ -2045,6 +2062,89 @@ console.log("userData",userData);
                       ))}
                     </div>
                   </div>
+                </div>
+              )}
+              {activeTab === "poaps" && (
+                <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center">
+                      <Award className="h-5 w-5 mr-2 text-purple-400" />
+                      <h2 className="text-lg font-bold">POAP Collection</h2>
+                    </div>
+                    {userData?.hackathonData?.POAP_HACKER && (
+                      <Badge className="bg-purple-900/70 text-purple-300 border-purple-700">
+                        {userData.hackathonData.POAP_HACKER.count || 0} POAPs
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {userData?.hackathonData?.POAP_HACKER && userData.hackathonData.POAP_HACKER.count > 0 ? (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                        {Object.entries(userData.hackathonData.POAP_HACKER.packs || {})
+                          .slice((poapPage - 1) * poapsPerPage, poapPage * poapsPerPage)
+                          .map(([id, poap]: [string, any]) => (
+                            <div key={id} className="bg-zinc-900/70 rounded-lg p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors">
+                              <div className="flex flex-col items-center">
+                                <div className="w-24 h-24 mb-3 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
+                                  {poap.image_url ? (
+                                    <img 
+                                      src={poap.image_url} 
+                                      alt={poap.name} 
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.src = "/placeholder-poap.png";
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-3xl text-zinc-600">🏆</span>
+                                  )}
+                                </div>
+                                <h3 className="text-sm font-medium text-center">{poap.name}</h3>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      
+                      {/* Pagination controls */}
+                      {userData?.hackathonData?.POAP_HACKER && userData.hackathonData.POAP_HACKER.count > poapsPerPage && (
+                        <div className="flex items-center justify-center mt-4 space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
+                            onClick={() => setPoapPage(p => Math.max(1, p - 1))}
+                            disabled={poapPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-zinc-400">
+                            Page {poapPage} of {Math.ceil((userData?.hackathonData?.POAP_HACKER?.count || 0) / poapsPerPage)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
+                            onClick={() => setPoapPage(p => Math.min(Math.ceil((userData?.hackathonData?.POAP_HACKER?.count || 0) / poapsPerPage), p + 1))}
+                            disabled={poapPage >= Math.ceil((userData?.hackathonData?.POAP_HACKER?.count || 0) / poapsPerPage)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="bg-zinc-900/50 rounded-xl p-8 text-center">
+                      <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-3xl">🏆</span>
+                      </div>
+                      <h3 className="text-xl font-medium text-zinc-400 mb-2">No POAPs Found</h3>
+                      <p className="text-zinc-500 max-w-md mx-auto">
+                        No POAP collection found for this user. POAPs are digital badges earned by participating in events and hackathons.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
