@@ -8,7 +8,7 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params; // Await the params promise to get the username
-  return {
+      return { 
     title: `${username} | Klyro Profile`,
     description: `View ${username}'s developer profile on Klyro. Backed by proof of work.`,
     openGraph: {

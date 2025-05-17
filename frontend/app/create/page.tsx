@@ -135,9 +135,9 @@ export default function UserDataForm() {
     setIsSubmitting(true);
     
     try {
-      // Prepare request payload
+      // Prepare request payload with trimmed GitHub username
       const payload = {
-        githubUsername,
+        githubUsername: githubUsername.trim(),
         addresses: wallets.map(w => w.address).filter(a => a.trim() !== "")
       };
       
@@ -146,7 +146,7 @@ export default function UserDataForm() {
       
       // Open modal and start polling
       setIsModalOpen(true);
-      startPolling(githubUsername);
+      startPolling(githubUsername.trim());
       
     } catch (error) {
       console.error("Error submitting form:", error);

@@ -228,18 +228,21 @@ export default function ProfileClient({username}: {username: string}) {
     hackathonData?: {
       WINS: {
         count: number;
-        packs: Record<string, boolean>;
+        packs: Array<{
+          imageUrl: string;
+          name: string;
+        }>;
       };
       HACKER: {
         count: number;
-        packs: Record<string, boolean>;
+        packs: Array<{
+          imageUrl: string;
+          name: string;
+        }>;
       };
       totalWins: number;
-      totalHacker: number;
-      POAP_HACKER?: {
-        count: number;
-        packs: Record<string, any>;
-      };
+      totalPoaps: number;
+      totalHackerExperience: number;
     };
   }
 
@@ -260,6 +263,11 @@ export default function ProfileClient({username}: {username: string}) {
   // Inside the ProfileClient component, add poapPage state for pagination
   const [poapPage, setPoapPage] = useState(1);
   const poapsPerPage = 9;
+  
+  // Add these state variables near the top of the component where other states are defined
+  const [winsPage, setWinsPage] = useState(1);
+  const [hackerPage, setHackerPage] = useState(1);
+  const hackathonItemsPerPage = 6;
   
   // Update the heatmap states when tab changes
   useEffect(() => {
@@ -1172,7 +1180,7 @@ console.log("userData",userData);
                   onClick={() => setActiveTab("hackathon")}
                   className={`rounded-full px-6 ${activeTab === "hackathon" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
-                  Hackathon
+                  Digital Footprints
                 </Button>
                 <Button 
                   variant={activeTab === "skills" ? "default" : "ghost"} 
@@ -1180,13 +1188,6 @@ console.log("userData",userData);
                   className={`rounded-full px-6 ${activeTab === "skills" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
                 >
                   Skills
-                </Button>
-                <Button 
-                  variant={activeTab === "poaps" ? "default" : "ghost"} 
-                  onClick={() => setActiveTab("poaps")}
-                  className={`rounded-full px-6 ${activeTab === "poaps" ? "bg-indigo-600 hover:bg-indigo-700" : "hover:bg-zinc-800/70 text-zinc-300"}`}
-                >
-                  POAPs
                 </Button>
               </div>
               
@@ -1805,194 +1806,149 @@ console.log("userData",userData);
               {activeTab === "hackathon" && (
                 <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">Hackathon Achievements</h2>
-                    {userData?.hackathonData && (userData.hackathonData.totalWins > 0 || userData.hackathonData.totalHacker > 0) && (
-                      <Badge className="bg-purple-900/70 text-purple-300 border-purple-700">
-                        Hacker Experience
+                    <h2 className="text-lg font-semibold">Experience & Recognition</h2>
+                    {userData?.hackathonData && (userData.hackathonData.totalWins > 0 || userData.hackathonData.totalHackerExperience > 0) && (
+                      <Badge className="bg-purple-900/70 text-purple-300 border-purple-700 hover:bg-purple-900/90 hover:border-purple-600 transition-colors">
+                        Total Hacker Experience - {userData?.hackathonData?.totalHackerExperience}
                       </Badge>
                     )}
                   </div>
                   
                   {userData?.hackathonData ? (
                     <div className="space-y-6">
-                      {/* Packs Section */}
-                      <div>
-                        <h3 className="text-md font-medium text-zinc-200 mb-4">ETHGlobal Packs</h3>
-                        {userData.hackathonData.HACKER.count > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Hacker Pack */}
-                            {userData.hackathonData.HACKER.packs["Hacker Pack"] && (
-                              <a 
-                                href="https://ethglobal.com/packs/hacker" 
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-400" />
-                                  </div>
-                                  <h4 className="text-lg font-medium">Hacker Pack</h4>
-                                </div>
-                                <p className="text-sm text-zinc-400 mb-3">
-                                  A pack exclusive for ETHGlobal hackers with access to Faucets and developer perks
-                                </p>
-                                <div className="flex items-center text-xs text-purple-400">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View on ETHGlobal
-                                </div>
-                              </a>
-                            )}
-                            
-                            {/* Builder Pack */}
-                            {userData.hackathonData.HACKER.packs["Builder Pack"] && (
-                              <a 
-                                href="https://ethglobal.com/packs/builder" 
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-400" />
-                                  </div>
-                                  <h4 className="text-lg font-medium">Builder Pack</h4>
-                                </div>
-                                <p className="text-sm text-zinc-400 mb-3">
-                                  A pack exclusive for seasoned ETHGlobal hackers with access to more onchain perks
-                                </p>
-                                <div className="flex items-center text-xs text-purple-400">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View on ETHGlobal
-                                </div>
-                              </a>
-                            )}
-                            
-                            {/* Pioneer Pack */}
-                            {userData.hackathonData.HACKER.packs["Pioneer Pack"] && (
-                              <a 
-                                href="https://ethglobal.com/packs/pioneer" 
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-400" />
-                                  </div>
-                                  <h4 className="text-lg font-medium">Pioneer Pack</h4>
-                                </div>
-                                <p className="text-sm text-zinc-400 mb-3">
-                                  A Pack for highly experienced ETHGlobal hackers with tons of perks and rewards
-                                </p>
-                                <div className="flex items-center text-xs text-purple-400">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View on ETHGlobal
-                                </div>
-                              </a>
-                            )}
-                            
-                            {/* Supporter Pack */}
-                            {userData.hackathonData.HACKER.packs["Supporter Pack"] && (
-                              <a 
-                                href="https://ethglobal.com/packs/supporter" 
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-400" />
-                                  </div>
-                                  <h4 className="text-lg font-medium">Supporter Pack</h4>
-                                </div>
-                                <p className="text-sm text-zinc-400 mb-3">
-                                  A Pack for supporters of ETHGlobal events, especially mentors and volunteers
-                                </p>
-                                <div className="flex items-center text-xs text-purple-400">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View on ETHGlobal
-                                </div>
-                              </a>
-                            )}
-                            
-                            {/* Partner Pack */}
-                            {userData.hackathonData.HACKER.packs["Partner Pack"] && (
-                              <a 
-                                href="https://ethglobal.com/packs/partner" 
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-400" />
-                                  </div>
-                                  <h4 className="text-lg font-medium">Partner Pack</h4>
-                                </div>
-                                <p className="text-sm text-zinc-400 mb-3">
-                                  A Pack for partners of ETHGlobal events who attend on behalf of supporting companies
-                                </p>
-                                <div className="flex items-center text-xs text-purple-400">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View on ETHGlobal
-                                </div>
-                              </a>
-                            )}
-                            
-                            {/* OG Pack */}
-                            {userData.hackathonData.HACKER.packs["OG Pack"] && (
-                              <a 
-                                href="https://ethglobal.com/packs/og" 
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-zinc-900/70 rounded-xl p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-400" />
-                                  </div>
-                                  <h4 className="text-lg font-medium">OG Pack</h4>
-                                </div>
-                                <p className="text-sm text-zinc-400 mb-3">
-                                  A Pack for OG members of the ETHGlobal community, especially judges and speakers
-                                </p>
-                                <div className="flex items-center text-xs text-purple-400">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  View on ETHGlobal
-                                </div>
-                              </a>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
-                            <Trophy className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
-                            <p className="text-zinc-500">No packs found. Try with a different address.</p>
-                          </div>
-                        )}
-                      </div>
-                      
                       {/* Wins Section */}
                       <div>
-                        <h3 className="text-md font-medium text-zinc-200 mb-4">Hackathon Wins</h3>
-                        {userData.hackathonData.WINS.count > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            {Object.keys(userData.hackathonData.WINS.packs).map((hackathon) => (
-                              <div 
-                                key={hackathon}
-                                className="bg-zinc-900/70 rounded-lg p-3 border border-zinc-800/50"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Trophy className="h-4 w-4 text-yellow-500" />
-                                  <span className="font-medium text-sm">{hackathon}</span>
-                                </div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <h3 className="text-md font-medium text-white">Awards</h3>
+                            <p className="text-zinc-400 inline-block">- {userData?.hackathonData?.totalWins} Wins</p>
+                          
+                        </div>
+                        {userData?.hackathonData?.WINS.count > 0 ? (
+                          <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                              {userData?.hackathonData?.WINS.packs
+                                .slice((winsPage - 1) * hackathonItemsPerPage, winsPage * hackathonItemsPerPage)
+                                .map((pack) => (
+                                  <div 
+                                    key={pack.name}
+                                    className="bg-zinc-900/70 rounded-lg p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors"
+                                  >
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-24 h-24 mb-3 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
+                                        <Image
+                                          src={pack.imageUrl}
+                                          alt={pack.name}
+                                          width={96}
+                                          height={96}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = "/placeholder-poap.png";
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-2 justify-center">
+                                        <h3 className="text-sm font-medium text-center">{pack.name}</h3>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                            
+                            {/* Pagination controls for Wins */}
+                            {userData?.hackathonData?.WINS.packs.length > hackathonItemsPerPage && (
+                              <div className="flex items-center justify-center mt-4 space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
+                                  onClick={() => setWinsPage(p => Math.max(1, p - 1))}
+                                  disabled={winsPage === 1}
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm text-zinc-400">
+                                  Page {winsPage} of {Math.ceil((userData?.hackathonData?.WINS.packs.length || 0) / hackathonItemsPerPage)}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
+                                  onClick={() => setWinsPage(p => Math.min(Math.ceil((userData?.hackathonData?.WINS.packs.length || 0) / hackathonItemsPerPage), p + 1))}
+                                  disabled={winsPage >= Math.ceil((userData?.hackathonData?.WINS.packs.length || 0) / hackathonItemsPerPage)}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
                               </div>
-                            ))}
-                          </div>
+                            )}
+                          </>
                         ) : (
                           <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
                             <Trophy className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
                             <p className="text-zinc-500">No hackathon wins yet. Keep building!</p>
+                          </div>
+                        )}
+                      </div>
+                      {/* Packs Section */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <h3 className="text-md font-medium text-zinc-200">Hacker Experience</h3>
+                          <p className="text-zinc-400 inline-block">- {userData?.hackathonData?.totalHackerExperience} Hacker Experience</p>
+                        </div>
+                        {userData?.hackathonData?.HACKER.count > 0 ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {userData?.hackathonData?.HACKER.packs
+                                .slice((hackerPage - 1) * hackathonItemsPerPage, hackerPage * hackathonItemsPerPage)
+                                .map((pack) => (
+                                  <div key={pack.name} className="bg-zinc-900/70 rounded-lg p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors">
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-24 min-h-24 mb-3 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center mx-auto  ">
+                                        <Image
+                                          src={pack.imageUrl}
+                                          alt={pack.name}
+                                          width={96}
+                                          height={96}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                      <h3 className="text-sm font-medium text-center">{pack.name}</h3>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                            
+                            {/* Pagination controls for Hacker Experience */}
+                            {userData?.hackathonData?.HACKER.packs.length > hackathonItemsPerPage && (
+                              <div className="flex items-center justify-center mt-4 space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
+                                  onClick={() => setHackerPage(p => Math.max(1, p - 1))}
+                                  disabled={hackerPage === 1}
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="text-sm text-zinc-400">
+                                  Page {hackerPage} of {Math.ceil((userData?.hackathonData?.HACKER.packs.length || 0) / hackathonItemsPerPage)}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
+                                  onClick={() => setHackerPage(p => Math.min(Math.ceil((userData?.hackathonData?.HACKER.packs.length || 0) / hackathonItemsPerPage), p + 1))}
+                                  disabled={hackerPage >= Math.ceil((userData?.hackathonData?.HACKER.packs.length || 0) / hackathonItemsPerPage)}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="bg-zinc-900/50 rounded-xl p-6 text-center">
+                            <Trophy className="w-12 h-12 mx-auto text-zinc-700 mb-3" />
+                            <p className="text-zinc-500">No packs found. Try with a different address.</p>
                           </div>
                         )}
                       </div>
@@ -2062,89 +2018,6 @@ console.log("userData",userData);
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
-              {activeTab === "poaps" && (
-                <div className="bg-zinc-950/90 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="flex items-center">
-                      <Award className="h-5 w-5 mr-2 text-purple-400" />
-                      <h2 className="text-lg font-bold">POAP Collection</h2>
-                    </div>
-                    {userData?.hackathonData?.POAP_HACKER && (
-                      <Badge className="bg-purple-900/70 text-purple-300 border-purple-700">
-                        {userData.hackathonData.POAP_HACKER.count || 0} POAPs
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {userData?.hackathonData?.POAP_HACKER && userData.hackathonData.POAP_HACKER.count > 0 ? (
-                    <>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                        {Object.entries(userData.hackathonData.POAP_HACKER.packs || {})
-                          .slice((poapPage - 1) * poapsPerPage, poapPage * poapsPerPage)
-                          .map(([id, poap]: [string, any]) => (
-                            <div key={id} className="bg-zinc-900/70 rounded-lg p-4 border border-zinc-800/50 hover:border-purple-800/50 transition-colors">
-                              <div className="flex flex-col items-center">
-                                <div className="w-24 h-24 mb-3 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
-                                  {poap.image_url ? (
-                                    <img 
-                                      src={poap.image_url} 
-                                      alt={poap.name} 
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.src = "/placeholder-poap.png";
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-3xl text-zinc-600">🏆</span>
-                                  )}
-                                </div>
-                                <h3 className="text-sm font-medium text-center">{poap.name}</h3>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                      
-                      {/* Pagination controls */}
-                      {userData?.hackathonData?.POAP_HACKER && userData.hackathonData.POAP_HACKER.count > poapsPerPage && (
-                        <div className="flex items-center justify-center mt-4 space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
-                            onClick={() => setPoapPage(p => Math.max(1, p - 1))}
-                            disabled={poapPage === 1}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm text-zinc-400">
-                            Page {poapPage} of {Math.ceil((userData?.hackathonData?.POAP_HACKER?.count || 0) / poapsPerPage)}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="w-8 h-8 rounded-full bg-zinc-900 border-zinc-700"
-                            onClick={() => setPoapPage(p => Math.min(Math.ceil((userData?.hackathonData?.POAP_HACKER?.count || 0) / poapsPerPage), p + 1))}
-                            disabled={poapPage >= Math.ceil((userData?.hackathonData?.POAP_HACKER?.count || 0) / poapsPerPage)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="bg-zinc-900/50 rounded-xl p-8 text-center">
-                      <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-3xl">🏆</span>
-                      </div>
-                      <h3 className="text-xl font-medium text-zinc-400 mb-2">No POAPs Found</h3>
-                      <p className="text-zinc-500 max-w-md mx-auto">
-                        No POAP collection found for this user. POAPs are digital badges earned by participating in events and hackathons.
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
