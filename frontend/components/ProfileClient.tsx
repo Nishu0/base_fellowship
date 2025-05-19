@@ -779,10 +779,10 @@ console.log("userData",userData);
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center p-6 bg-zinc-900 rounded-lg max-w-md">
-          <h2 className="text-xl font-bold mb-4">Error Loading Profile</h2>
+          <h2 className="text-xl font-bold mb-4">Profile Not Found</h2>
           <p className="text-zinc-400 mb-6">{error || "User data not available"}</p>
-          <Link href="/">
-            <Button variant="outline">Back to Home</Button>
+          <Link href="/create">
+            <Button variant="outline">Head to the create page</Button>
           </Link>
         </div>
       </div>
@@ -1319,11 +1319,35 @@ console.log("userData",userData);
                         <div className="text-lg font-bold text-white">
                           {formatTVL(user.chains.reduce((sum, chain) => sum + parseFloat(chain.tvl || "0"), 0))}
                         </div>
-                        <div className="text-xs text-zinc-400">Total TVL</div>
+                        <div className="text-xs text-zinc-400 flex items-center justify-center gap-1">
+                          Total TVL
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3 w-3 text-zinc-500 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="w-[200px] text-xs">Total Value Locked across all your deployed smart contracts</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
                       <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.onchainActivity.uniqueUsers}</div>
-                        <div className="text-xs text-zinc-400">Unique Users</div>
+                        <div className="text-xs text-zinc-400 flex items-center justify-center gap-1 whitespace-nowrap">
+                        Unique Users
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3 w-3 text-zinc-500 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="w-[200px] text-xs">Total number of unique users interacting with your deployed contracts</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
                       <div className="bg-zinc-900/70 rounded-lg p-3 text-center">
                         <div className="text-lg font-bold text-white">{user.onchainActivity.topChain}</div>
