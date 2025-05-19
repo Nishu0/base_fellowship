@@ -93,16 +93,6 @@ export default function Navbar() {
                 Partner as Community
               </Link>
             </li>
-            <li>
-              <Link 
-                href="/user" 
-                className="flex items-center gap-2 p-2 text-sm hover:text-indigo-500"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <User className="h-4 w-4" />
-                Profile
-              </Link>
-            </li>
           </ul>
         </div>
       )}
