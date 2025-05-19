@@ -51,30 +51,27 @@ const isValidAddress = (address: string): boolean => {
   return false;
 };
 
-// Helper function to extract GitHub username from URL or return as-is
-const extractGithubUsername = (input: string): string => {
-  // Remove leading/trailing whitespace
-  const trimmed = input.trim();
-  // Regex to match GitHub profile URLs
-  const match = trimmed.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/(\w[\w-]*)/i);
-  if (match && match[1]) {
-    return match[1];
-  }
-  // If input starts with @, remove it
-  if (trimmed.startsWith("@")) {
-    return trimmed.slice(1);
-  }
-  return trimmed;
+const isValidGithubUsername = (username: string): boolean => {
+  // Only allow alphanumeric, hyphens, and must not start with @ or contain github.com
+  if (!username) return false;
+  if (username.startsWith("@")) return false;
+  if (username.includes("github.com")) return false;
+  if (/^https?:\/\//.test(username)) return false;
+  // GitHub usernames: 1-39 chars, alphanumeric or hyphen, cannot start/end with hyphen, no consecutive hyphens
+  return /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(username);
 };
 
 export default function UserDataForm() {
   const [wallets, setWallets] = useState([{ id: 1, address: "", isValid: true }]);
   const [githubUsername, setGithubUsername] = useState("");
+  const [githubUsernameTouched, setGithubUsernameTouched] = useState(false);
   const [twitterUsername, setTwitterUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusData, setStatusData] = useState<StatusResponse | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  const githubUsernameIsValid = isValidGithubUsername(githubUsername);
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -132,6 +129,12 @@ export default function UserDataForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate GitHub username
+    if (!githubUsernameIsValid) {
+      setGithubUsernameTouched(true);
+      return;
+    }
+    
     // Validate all wallet addresses
     const allValid = wallets.every(wallet => {
       // Skip empty addresses except the first one
@@ -151,9 +154,9 @@ export default function UserDataForm() {
     setIsSubmitting(true);
     
     try {
-      // Prepare request payload with extracted GitHub username
+      // Prepare request payload with trimmed GitHub username
       const payload = {
-        githubUsername: extractGithubUsername(githubUsername),
+        githubUsername: githubUsername.trim(),
         addresses: wallets.map(w => w.address).filter(a => a.trim() !== "")
       };
       
@@ -218,12 +221,25 @@ export default function UserDataForm() {
                   id="github"
                   type="text"
                   value={githubUsername}
-                  onChange={(e) => setGithubUsername(e.target.value)}
+                  onChange={(e) => {
+                    setGithubUsername(e.target.value);
+                    setGithubUsernameTouched(true);
+                  }}
+                  onBlur={() => setGithubUsernameTouched(true)}
                   placeholder="Enter your GitHub username"
-                  className="bg-zinc-900/70 border-zinc-800 h-11 pl-3 focus:ring-blue-500 focus:border-blue-500"
+                  className={`bg-zinc-900/70 border-zinc-800 h-11 pl-3 focus:ring-blue-500 focus:border-blue-500 ${githubUsernameTouched && !githubUsernameIsValid ? 'border-red-500' : ''}`}
                   required
                 />
               </div>
+              <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1">
+                <span className="bg-zinc-800 px-2 py-0.5 rounded">github.com / @username</span>
+                <span className="text-zinc-500">We accept only username</span>
+              </div>
+              {githubUsernameTouched && !githubUsernameIsValid && (
+                <p className="text-red-500 text-xs mt-1 pl-1">
+                  Please enter only your GitHub username (not a URL or @username)
+                </p>
+              )}
             </div>
 
             {/* Wallet Addresses */}
