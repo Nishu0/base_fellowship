@@ -51,6 +51,22 @@ const isValidAddress = (address: string): boolean => {
   return false;
 };
 
+// Helper function to extract GitHub username from URL or return as-is
+const extractGithubUsername = (input: string): string => {
+  // Remove leading/trailing whitespace
+  const trimmed = input.trim();
+  // Regex to match GitHub profile URLs
+  const match = trimmed.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/(\w[\w-]*)/i);
+  if (match && match[1]) {
+    return match[1];
+  }
+  // If input starts with @, remove it
+  if (trimmed.startsWith("@")) {
+    return trimmed.slice(1);
+  }
+  return trimmed;
+};
+
 export default function UserDataForm() {
   const [wallets, setWallets] = useState([{ id: 1, address: "", isValid: true }]);
   const [githubUsername, setGithubUsername] = useState("");
@@ -135,9 +151,9 @@ export default function UserDataForm() {
     setIsSubmitting(true);
     
     try {
-      // Prepare request payload with trimmed GitHub username
+      // Prepare request payload with extracted GitHub username
       const payload = {
-        githubUsername: githubUsername.trim(),
+        githubUsername: extractGithubUsername(githubUsername),
         addresses: wallets.map(w => w.address).filter(a => a.trim() !== "")
       };
       
