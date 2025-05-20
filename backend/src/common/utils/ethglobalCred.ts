@@ -1,4 +1,4 @@
-import { Network } from 'alchemy-sdk';
+import { Alchemy, AlchemyProvider, Network } from 'alchemy-sdk';
 import { getAlchemyProvider } from './alchemyProvider';
 
 const communityPacks = {
@@ -64,6 +64,7 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
     
             // Update results based on owned NFTs
             for (const nft of ownedNfts) {
+                console.log("nft", nft);
                 const packName = contractToPackName[nft.contract.address.toLowerCase()];
                 if (packName) {
                     if(packName === "ETHGlobal Singapore 2025 Finalist"){
@@ -77,7 +78,7 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
                         results.push(
                             {
                               name: packName,
-                              imageUrl: nft.image.originalUrl
+                              imageUrl: nft?.image?.originalUrl || (nft?.name === "Hacker Pack" ? "https://storage.googleapis.com/ethglobal-api-production/packs/hacker/hacker-pack.jpg" : "")
                             }
                           )
                     }
@@ -87,52 +88,6 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
             }
         } catch (error) {
             console.error('Error fetching NFTs:', error);
-            
-            // Fallback method: Direct contract calls if the NFT endpoint fails
-            await Promise.all(
-                Object.entries(packs).map(async ([packName, contractAddress]) => {
-                    try {
-                        // Check balance using the basic balanceOf function
-                        const ownerAddr = walletAddress.startsWith('0x') ? walletAddress : `0x${walletAddress}`;
-                        const balance = await checkNFTBalance(provider, contractAddress, ownerAddr);
-                        
-                        if (balance > 0) {
-                            // Try to get NFT metadata including image
-                            let imageUrl = '';
-                            try {
-                                // Get token ID of first owned NFT
-                                const nftsForContract = await provider.nft.getNftsForOwner(
-                                    walletAddress,
-                                    { contractAddresses: [contractAddress] }
-                                );
-                                
-                                if (nftsForContract.ownedNfts.length > 0) {
-                                    imageUrl = nftsForContract.ownedNfts[0].image?.originalUrl || '';
-                                }
-                            } catch (metadataErr) {
-                                console.error(`Failed to fetch NFT metadata for ${packName}:`, metadataErr);
-                            }
-
-
-                            if(packName === "ETHGlobal Singapore 2025 Finalist"){
-                                results.push({
-                                    name: packName,
-                                    imageUrl: "https://ethglobal.b-cdn.net/packs/singapore2024-finalist/logo/default.jpg"
-                                });
-                            }else{
-                                results.push({
-                                    name: packName,
-                                    imageUrl: imageUrl
-                                });
-                            }
-                                         
-                            count++;
-                        }
-                    } catch (err) {
-                        console.error(`Failed to check balance for ${packName}:`, err);
-                    }
-                })
-            );
         }
     } catch (error) {
         console.error('Error checking pack balances:', error);
@@ -142,25 +97,7 @@ async function checkPackBalances(walletAddress: string, packs: Record<string, st
     return { results, count };
 }
 
-/**
- * Helper function to check NFT balance directly via contract call
- */
-async function checkNFTBalance(provider: any, contractAddress: string, ownerAddress: string): Promise<number> {
-    try {
-        // Simple ERC721 balanceOf ABI
-        const abi = ['function balanceOf(address owner) view returns (uint256)'];
-        
-        // @ts-ignore - Using the core provider directly
-        const contract = provider.core.provider.attachContract(contractAddress, abi);
-        const balance = await contract.balanceOf(ownerAddress);
-        
-        // Convert BigInt or similar to number
-        return Number(balance.toString());
-    } catch (error) {
-        console.error(`Error checking NFT balance for ${contractAddress}:`, error);
-        return 0;
-    }
-}
+
 
 /**
  * Check for community packs (Hacker, Builder, etc.)
