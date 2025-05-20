@@ -2,6 +2,7 @@ import { Alchemy, AssetTransfersCategory, Network } from 'alchemy-sdk';
 import { checkCommunityPacks, checkFinalistPacks } from './ethglobalCred';
 import { getPOAPCredentials } from './poapCredentials';
 import axios from 'axios';
+import { checkDevfolioCreds } from './devfolioCreds';
 
 interface PriceCache {
     price: number;
@@ -526,24 +527,26 @@ export class OnchainDataManager {
         console.log("Getting hackathon credentials for", address);
         
         // Run all checks in parallel
-        const [communityPacksResult, finalistPacksResult, poapCredentials] = await Promise.all([
+        const [communityPacksResult, finalistPacksResult, poapCredentials, devfolioCreds] = await Promise.all([
             checkCommunityPacks(address),
             checkFinalistPacks(address),
-            getPOAPCredentials(address)
+            getPOAPCredentials(address),
+            checkDevfolioCreds(address)
         ]);
 
         console.log("communityPacksResult", communityPacksResult);
         console.log("finalistPacksResult", finalistPacksResult);
         console.log("poapCredentials", poapCredentials);
         console.log(poapCredentials.hackerExperience.results)
+        console.log("devfolioCreds", devfolioCreds);
         return {
             HACKER: {
-                count: communityPacksResult.count + poapCredentials.hackerExperienceCount,
-                packs: [...communityPacksResult.results, ...poapCredentials.hackerExperience.results]
+                count: communityPacksResult.count + poapCredentials.hackerExperienceCount + (devfolioCreds?.hackers?.count || 0),
+                packs: [...(devfolioCreds?.hackers?.results || []), ...communityPacksResult.results, ...poapCredentials.hackerExperience.results]
             },
             WINS: {
-                count: finalistPacksResult.count + poapCredentials.hackathonWinsCount,
-                packs: [...finalistPacksResult.results, ...poapCredentials.hackathonWins.results]
+                count: finalistPacksResult.count + (poapCredentials.hackathonWinsCount || 0) + (devfolioCreds?.wins?.count || 0),
+                packs: [...(devfolioCreds?.wins?.results || []), ...finalistPacksResult.results, ...(poapCredentials.hackathonWins?.results || [])]
             },
             totalPoaps: poapCredentials.totalPoaps
         };
