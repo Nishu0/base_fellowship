@@ -780,9 +780,9 @@ console.log("userData",userData);
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center p-6 bg-zinc-900 rounded-lg max-w-md">
           <h2 className="text-xl font-bold mb-4">Profile Not Found</h2>
-          <p className="text-zinc-400 mb-6">{error || "User data not available"}</p>
+          <p className="text-zinc-400 mb-6">{"User data not available"}</p>
           <Link href="/create">
-            <Button variant="outline">Head to the create page</Button>
+            <Button variant="outline">Head to the create page to create your profile</Button>
           </Link>
         </div>
       </div>
