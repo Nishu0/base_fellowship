@@ -146,10 +146,10 @@ export default function UserDataForm() {
       return;
     }
     
-    // Validate all wallet addresses
+    // Validate all wallet addresses (only if they are provided)
     const allValid = wallets.every(wallet => {
-      // Skip empty addresses except the first one
-      if (!wallet.address && wallets.indexOf(wallet) > 0) return true;
+      // Skip empty addresses
+      if (!wallet.address) return true;
       return isValidAddress(wallet.address);
     });
     
@@ -157,7 +157,7 @@ export default function UserDataForm() {
       // Update validity status for all wallets
       setWallets(wallets.map(wallet => ({
         ...wallet,
-        isValid: isValidAddress(wallet.address)
+        isValid: !wallet.address || isValidAddress(wallet.address)
       })));
       return;
     }
@@ -165,7 +165,7 @@ export default function UserDataForm() {
     setIsSubmitting(true);
     
     try {
-      // Prepare request payload with trimmed GitHub username
+      // Prepare request payload with trimmed GitHub username and only non-empty addresses
       const payload = {
         githubUsername: githubUsername.trim(),
         addresses: wallets.map(w => w.address).filter(a => a.trim() !== ""),
@@ -308,8 +308,8 @@ export default function UserDataForm() {
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Wallet size={16} className="text-zinc-400" />
-                Wallet Addresses <span className="text-red-500">*</span>
-                <span className="text-xs text-zinc-500 ml-1">(Ethereum address, ENS or Base ENS)</span>
+                Wallet Addresses
+                <span className="text-xs text-zinc-500 ml-1">(Optional - Ethereum address, ENS or Base ENS)</span>
               </Label>
               
               {wallets.map((wallet, index) => (
@@ -321,7 +321,6 @@ export default function UserDataForm() {
                       onChange={(e) => updateWallet(wallet.id, e.target.value)}
                       placeholder={`Wallet address ${index + 1}`}
                       className={`bg-zinc-900/70 border-zinc-800 h-11 pl-3 focus:ring-blue-500 focus:border-blue-500 ${!wallet.isValid ? 'border-red-500' : ''}`}
-                      required={index === 0} // Only first wallet is required
                     />
                     {wallets.length > 1 && (
                       <Button
@@ -335,7 +334,7 @@ export default function UserDataForm() {
                       </Button>
                     )}
                   </div>
-                  {!wallet.isValid && (
+                  {!wallet.isValid && wallet.address && (
                     <p className="text-red-500 text-xs pl-1">
                       Please enter a valid Ethereum address, ENS domain (.eth) or Base ENS domain (.base.eth)
                     </p>
@@ -355,6 +354,9 @@ export default function UserDataForm() {
                   Add Another Wallet Address
                 </Button>
               )}
+              <p className="text-xs text-amber-500 mt-2">
+                Note: Not providing any wallet addresses will reduce your profile score as we won't be able to analyze your on-chain activity.
+              </p>
             </div>
 
             {/* Twitter Username */}
