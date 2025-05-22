@@ -281,6 +281,7 @@ export default function UserDataForm() {
                   onChange={(e) => {
                     setGithubUsername(e.target.value);
                     setGithubUsernameTouched(true);
+                    setGithubUsernameError(null);
                   }}
                   onBlur={() => setGithubUsernameTouched(true)}
                   placeholder="Enter your GitHub username"
