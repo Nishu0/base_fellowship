@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, X, Github, Wallet, Twitter, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { PlusCircle, X, Github, Wallet, Twitter, Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/axiosClient";
 import { isAddress } from "ethers";
@@ -61,6 +61,12 @@ const isValidGithubUsername = (username: string): boolean => {
   return /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(username);
 };
 
+// Add email validation function
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
 export default function UserDataForm() {
   const [wallets, setWallets] = useState([{ id: 1, address: "", isValid: true }]);
   const [githubUsername, setGithubUsername] = useState("");
@@ -73,6 +79,11 @@ export default function UserDataForm() {
 
   const githubUsernameIsValid = isValidGithubUsername(githubUsername);
 
+  const [email, setEmail] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [githubUsernameError, setGithubUsernameError] = useState<string | null>(null);
+
   // Clean up polling on unmount
   useEffect(() => {
     return () => {
@@ -83,7 +94,7 @@ export default function UserDataForm() {
   }, [pollingInterval]);
 
   const addWallet = () => {
-    if (wallets.length < 3) {
+    if (wallets.length < 5) {
       setWallets([...wallets, { id: Date.now(), address: "", isValid: true }]);
     }
   };
@@ -157,7 +168,8 @@ export default function UserDataForm() {
       // Prepare request payload with trimmed GitHub username
       const payload = {
         githubUsername: githubUsername.trim(),
-        addresses: wallets.map(w => w.address).filter(a => a.trim() !== "")
+        addresses: wallets.map(w => w.address).filter(a => a.trim() !== ""),
+        email: email.trim()
       };
       
       // Make API request to analyze user
@@ -167,8 +179,13 @@ export default function UserDataForm() {
       setIsModalOpen(true);
       startPolling(githubUsername.trim());
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error);
+      console.log("error", error?.response?.data?.error);
+      if(error?.response?.data?.error === "Invalid github username") {
+        console.log("invalid github username");
+        setGithubUsernameError("Invalid Github username");
+      }
       //alert("An error occurred while analyzing your profile. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -210,6 +227,46 @@ export default function UserDataForm() {
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 backdrop-blur-sm p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+
+             {/* Email */}
+             <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail size={16} className="text-zinc-400" />
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailTouched(true);
+                    if (!isValidEmail(e.target.value)) {
+                      setEmailError("Please enter a valid email address");
+                    } else {
+                      setEmailError(null);
+                    }
+                  }}
+                  onBlur={() => {
+                    setEmailTouched(true);
+                    if (!isValidEmail(email)) {
+                      setEmailError("Please enter a valid email address");
+                    } else {
+                      setEmailError(null);
+                    }
+                  }}
+                  placeholder="Enter your email"
+                  className={`bg-zinc-900/70 border-zinc-800 h-11 pl-3 focus:ring-blue-500 focus:border-blue-500 ${emailTouched && emailError ? 'border-red-500' : ''}`}
+                  required
+                />
+              </div>
+              {emailTouched && emailError && (
+                <p className="text-red-500 text-xs mt-1 pl-1">
+                  {emailError}
+                </p>
+              )}
+            </div>
             {/* GitHub Username */}
             <div className="space-y-2">
               <Label htmlFor="github" className="flex items-center gap-2">
@@ -238,6 +295,11 @@ export default function UserDataForm() {
               {githubUsernameTouched && !githubUsernameIsValid && (
                 <p className="text-red-500 text-xs mt-1 pl-1">
                   Please enter only your GitHub username (not a URL or @username)
+                </p>
+              )}
+              {githubUsernameError && (
+                <p className="text-red-500 text-xs mt-1 pl-1">
+                  {githubUsernameError}
                 </p>
               )}
             </div>
@@ -281,7 +343,7 @@ export default function UserDataForm() {
                 </div>
               ))}
               
-              {wallets.length < 3 && (
+              {wallets.length < 5 && (
                 <Button
                   type="button"
                   variant="ghost"

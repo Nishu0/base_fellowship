@@ -7,6 +7,9 @@ import { OnchainDataManager } from '@/common/utils/OnchainDataManager';
 import { Logger } from '@/common/utils/logger';
 import { Network } from 'alchemy-sdk';
 import { getAlchemyProvider } from '@/common/utils/alchemyProvider';
+import { GitHubHelper } from '@/common/utils/githubHelper';
+import { env } from '@/common/utils/envConfig';
+import { getNextGithubToken } from '@/common/utils/getCreds';
 
 const prisma = new PrismaClient();
 
@@ -17,14 +20,27 @@ export class FbiController {
         this.fbiService = new FbiService();
     }
 
-    async analyzeUser(req: Request, res: Response): Promise<void> {
+    async analyzeUser(req: Request, res: Response): Promise<void | Response> {
         Logger.info('FbiController', 'analyzeUser called', { body: req.body });
         try {
             const request: AnalyzeUserRequest = {
                 githubUsername: req.body.githubUsername.toLowerCase(),
-                addresses: req.body.addresses
+                addresses: req.body.addresses,
+                email: req.body.email
             };
 
+            const githubHelper = new GitHubHelper(await getNextGithubToken());
+
+            // Check if username is valid
+            const isValidUsername = await githubHelper.isValidUsername(request.githubUsername);
+            if (!isValidUsername) {
+                Logger.error('FbiController', 'Invalid Github username', { githubUsername: request.githubUsername });
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid github username"
+                });
+
+            }
 
             // Resolve ENS names to addresses
             const resolvedAddresses = await Promise.all(
@@ -88,6 +104,7 @@ export class FbiController {
                     data: {
                         githubId: request.githubUsername,
                         dataStatus: DataStatus.PENDING,
+                        email: request.email,
                         githubData: {
                             create: {
                                 userInfo: {},

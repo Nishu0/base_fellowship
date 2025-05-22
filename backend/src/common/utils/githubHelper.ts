@@ -340,6 +340,27 @@ export class GitHubHelper {
     
         return stats;
       }
+
+      /**
+       * Check if a GitHub username is valid
+       * @param username The GitHub username to check
+       * @returns Promise<boolean> True if username exists, false otherwise
+       */
+      async isValidUsername(username: string): Promise<boolean> {
+        try {
+          const query = `
+            query($username: String!) {
+              user(login: $username) {
+                login
+              }
+            }
+          `;
+          const data = await this.makeGraphQLRequest(query, { username });
+          return !!data.user;
+        } catch (error) {
+          return false;
+        }
+      }
   }
   
 
