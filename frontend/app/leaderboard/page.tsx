@@ -25,46 +25,91 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import Image from "next/image";
-import sampleUsers from "@/data/sample-users.json";
+import { api } from "@/lib/axiosClient";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Search, Download, ChevronDown, ChevronUp, Check } from "lucide-react";
 
-// Extract unique chains from all users
-const getAllChains = () => {
-  const chains = new Set<string>();
-  sampleUsers.forEach(user => {
-    user.chains.forEach(chain => chains.add(chain));
-  });
-  return Array.from(chains);
-};
-
-// Get all unique skills
-const getAllSkills = () => {
-  const skills = new Set<string>();
-  sampleUsers.forEach(user => {
-    user.skills.forEach(skill => skills.add(skill));
-  });
-  return Array.from(skills);
-};
-
 export default function LeaderboardPage() {
-  const allChains = getAllChains();
-  const allSkills = getAllSkills();
+  const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [allChains, setAllChains] = useState<string[]>([]);
+  const [allSkills, setAllSkills] = useState<string[]>([]);
   const [selectedChain, setSelectedChain] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'overall' | 'github' | 'onchain' | 'wins'>('overall');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState([...sampleUsers]);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedUser, setSelectedUser] = useState<typeof sampleUsers[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [hasUnlockedExport, setHasUnlockedExport] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
+  // Fetch leaderboard data on mount
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await api.get("/fbi/users/leaderboard");
+        if (!res.data?.success || !Array.isArray(res.data.data)) {
+          throw new Error("Invalid leaderboard data");
+        }
+        // Map API data to leaderboard UI structure
+        const mapped = res.data.data.slice(0, 50).map((entry: any, idx: number) => {
+          const info = entry.userInfo || {};
+          const score = entry.score || {};
+          const metrics = score.metrics || {};
+          return {
+            id: idx + 1,
+            githubUsername: entry.githubUsername,
+            name: info.name || info.login || entry.githubUsername,
+            username: info.login || entry.githubUsername,
+            avatar: info.avatar_url,
+            bio: info.bio,
+            blog: info.blog,
+            email: info.email,
+            html_url: info.html_url,
+            location: info.location,
+            followers: info.followers,
+            public_repos: info.public_repos,
+            twitter: info.twitter_username,
+            verified: true,
+            overall_score: Math.round(score.totalScore || 0),
+            github_score: Math.round(metrics.web2?.total || 0),
+            onchain_score: Math.round(metrics.web3?.total || 0),
+            hackathon_wins: metrics.web3?.hackerExperience?.value || 0,
+            // For chains and skills, fallback to empty array if not present
+            chains: [], // You can update this if you have chain info
+            top_chain: "-", // You can update this if you have chain info
+            skills: Object.keys(metrics.web2?.totalLinesOfCode?.breakdown || {}),
+          };
+        });
+        setUsers(mapped);
+        setFilteredUsers(mapped);
+        // Extract all unique chains and skills
+        const allChainsSet = new Set<string>();
+        const allSkillsSet = new Set<string>();
+        mapped.forEach((user: any) => {
+          (user.chains || []).forEach((chain: string) => allChainsSet.add(chain));
+          (user.skills || []).forEach((skill: string) => allSkillsSet.add(skill));
+        });
+        setAllChains(Array.from(allChainsSet));
+        setAllSkills(Array.from(allSkillsSet));
+      } catch (err: any) {
+        setError(err?.message || "Failed to load leaderboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeaderboard();
+  }, []);
+
   // Filter and sort users based on criteria
   useEffect(() => {
-    let result = [...sampleUsers];
+    let result = [...users];
     
     // Apply search filter
     if (searchQuery.trim()) {
@@ -104,7 +149,7 @@ export default function LeaderboardPage() {
     }
     
     setFilteredUsers(result);
-  }, [selectedChain, selectedSkill, sortBy, searchQuery, sortOrder]);
+  }, [users, selectedChain, selectedSkill, sortBy, searchQuery, sortOrder]);
 
   // Toggle sort order
   const toggleSortOrder = () => {
@@ -121,7 +166,7 @@ export default function LeaderboardPage() {
   };
 
   // Open user details sheet
-  const openUserDetails = (user: typeof sampleUsers[0]) => {
+  const openUserDetails = (user: any) => {
     setSelectedUser(user);
     setIsSheetOpen(true);
   };
@@ -131,6 +176,27 @@ export default function LeaderboardPage() {
     // In a real app, this would connect to a wallet and process payment
     setHasUnlockedExport(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
+          <p className="mt-4">Loading leaderboard...</p>
+        </div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center p-6 bg-zinc-900 rounded-lg max-w-md">
+          <h2 className="text-xl font-bold mb-4">Error Loading Leaderboard</h2>
+          <p className="text-zinc-400 mb-6">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col bg-black text-white">
@@ -295,7 +361,7 @@ export default function LeaderboardPage() {
         <div className="flex-1 p-4 overflow-auto">
           {filteredUsers.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
-              {filteredUsers.map((user) => (
+              {filteredUsers.map((user: any) => (
                 <div 
                   key={user.id}
                   onClick={() => openUserDetails(user)}
@@ -324,7 +390,7 @@ export default function LeaderboardPage() {
                           {user.username}
                           {user.verified && (
                             <svg className="w-4 h-4 ml-1 text-blue-500" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
-                              <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61-.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
+                              <path fill="currentColor" d="m23 12-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82L8.6 22.5l3.4-1.47 3.4 1.46 1.89-3.19 3.61-.82-.34-3.69zm-12.91 4.72-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48z"></path>
                             </svg>
                           )}
                         </div>
@@ -332,15 +398,15 @@ export default function LeaderboardPage() {
                       </div>
                     </div>
 
-                    {/* Top Chain - Col 3 */}
+                    {/* Location - Col 3 */}
                     <div className="col-span-12 md:col-span-2">
                       <div className="flex flex-col">
-                        <div className="text-xs text-zinc-500 mb-1">Top Chain</div>
+                        <div className="text-xs text-zinc-500 mb-1">Location</div>
                         <div className="flex">
                           <Badge 
                             className="bg-zinc-900/70 border border-zinc-700 py-1 px-3 rounded-full text-white"
                           >
-                            {user.top_chain}
+                            {user.location || "-"}
                           </Badge>
                         </div>
                       </div>
@@ -383,7 +449,7 @@ export default function LeaderboardPage() {
                       <div className="flex flex-col">
                         <div className="text-xs text-zinc-500 mb-1">Skills</div>
                         <div className="flex flex-wrap gap-1">
-                          {user.skills.slice(0, 2).map(skill => (
+                          {user.skills.slice(0, 2).map((skill: string) => (
                             <Badge key={skill} className="bg-zinc-800 text-zinc-200 text-xs px-2 py-1 rounded-md">
                               {skill}
                             </Badge>
@@ -464,7 +530,7 @@ export default function LeaderboardPage() {
                       </h2>
                       <Button
                         className="bg-white text-black hover:bg-zinc-200 text-sm h-8 px-4 rounded-full"
-                        onClick={() => window.open(`/profile/${selectedUser.username}`, '_blank')}
+                        onClick={() => window.open(`/${selectedUser.username}`, '_blank')}
                       >
                         View Profile
                       </Button>
@@ -482,30 +548,11 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
 
-                {/* Top chains */}
-                <div>
-                  <h3 className="text-sm font-medium text-zinc-400 mb-2">Top Chains</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUser.chains.map(chain => (
-                      <Badge 
-                        key={chain} 
-                        className={`py-1 px-3 rounded-full ${
-                          chain === selectedUser.top_chain 
-                            ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-600/30' 
-                            : 'bg-zinc-800 border border-zinc-700'
-                        }`}
-                      >
-                        {chain}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Skills */}
                 <div>
                   <h3 className="text-sm font-medium text-zinc-400 mb-2">Skills</h3>
                   <div className="flex flex-wrap gap-2">
-                    {selectedUser.skills.map(skill => (
+                    {selectedUser.skills.slice(0, 4).map((skill: string) => (
                       <Badge 
                         key={skill} 
                         className="bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md"
@@ -513,12 +560,17 @@ export default function LeaderboardPage() {
                         {skill}
                       </Badge>
                     ))}
+                    {selectedUser.skills.length > 4 && (
+                      <Badge className="bg-zinc-800 text-zinc-200 px-2 py-1 rounded-md">
+                        +{selectedUser.skills.length - 4}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
-                {/* Score cards */}
+                {/* Score cards - Only Web2, Web3, Hackathon Wins */}
                 <div className="space-y-4">
-                  {/* GitHub */}
+                  {/* Web2 Score */}
                   <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center">
@@ -527,7 +579,7 @@ export default function LeaderboardPage() {
                         </svg>
                       </div>
                       <div>
-                        <div className="font-medium">GitHub</div>
+                        <div className="font-medium">Web2 Score</div>
                         <div className="text-xs text-zinc-400">{selectedUser.github_score}/100 pts</div>
                       </div>
                     </div>
@@ -539,7 +591,7 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
 
-                  {/* Top Chain */}
+                  {/* Web3 Score */}
                   <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center">
@@ -548,7 +600,7 @@ export default function LeaderboardPage() {
                         </svg>
                       </div>
                       <div>
-                        <div className="font-medium">{selectedUser.top_chain}</div>
+                        <div className="font-medium">Web3 Score</div>
                         <div className="text-xs text-zinc-400">{selectedUser.onchain_score}/100 pts</div>
                       </div>
                     </div>
@@ -556,48 +608,6 @@ export default function LeaderboardPage() {
                       <div 
                         className="h-full bg-blue-500 rounded-full"
                         style={{ width: `${selectedUser.onchain_score}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* ETHGlobal */}
-                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                          <path d="M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18s-.41-.06-.57-.18l-7.9-4.44A.991.991 0 013 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18s.41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9M12 4.15L5 8.09v7.82l7 3.94 7-3.94V8.09l-7-3.94z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-medium">ETHGlobal</div>
-                        <div className="text-xs text-zinc-400">{Math.round(selectedUser.onchain_score * 0.5)}/100 pts</div>
-                      </div>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 rounded-full"
-                        style={{ width: `${selectedUser.onchain_score * 0.5}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Onchain Activity */}
-                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-medium">Onchain Activity</div>
-                        <div className="text-xs text-zinc-400">{Math.round(selectedUser.onchain_score * 0.36)}/100 pts</div>
-                      </div>
-                    </div>
-                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-orange-500 rounded-full"
-                        style={{ width: `${selectedUser.onchain_score * 0.36}%` }}
                       ></div>
                     </div>
                   </div>
