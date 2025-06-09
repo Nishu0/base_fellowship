@@ -8,128 +8,290 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Session model to group messages and character files
+// Main User model - Normal users (for form responses)
 model User {
-  id           String         @id @default(uuid())
-  githubId     String         @unique
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  wallets      Wallet[]
-  githubData   GithubData?
-  contractsData ContractsData?
-  onchainData  OnchainData?
-  userScore    UserScore?
-  lastFetchedAt DateTime?
-  dataStatus   DataStatus?
+  id              String          @id @default(uuid())
+  privyUserId     String?         @unique // Optional for normal users
+  githubId        String?         @unique
+  email           String?
+  userType        UserType        @default(NORMAL) // Track user type
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  wallets         Wallet[]
+  githubData      GithubData?
+  contractsData   ContractsData?
+  onchainData     OnchainData?
+  userScore       UserScore?
+  lastFetchedAt   DateTime?
+  dataStatus      DataStatus?
   developerWorth  DeveloperWorth?
-  email String  @default("")
+  
+  // Form relationships (only for normal users)
+  formResponses   FormResponse[]  @relation("FormRespondent")
+  
+  // Selected user relationships
+  selectedInLists SelectedUser[]  @relation("SelectedUser")
+}
 
+// Organization User model - For users who create/manage organizations
+model OrganizationUser {
+  id              String          @id @default(uuid())
+  privyUserId     String          @unique // Required for organization users
+  email           String?
+  name            String?
+  userType        UserType        @default(ORGANIZATION) // Track user type
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Organization relationships
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+  organizationMemberships OrganizationMember[]
+  
+  // Form relationships
+  createdForms    Form[]          @relation("FormCreator")
+  createdLists    UserList[]      @relation("ListCreator")
 }
 
 model Wallet {
-  id              String          @id
-  address         String          
-  chainType       String
-  chainId         String
-  userId          String
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-
-} 
-
-model GithubData {
-  id String @id @default(uuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userInfo Json
-  repos Json
-  orgs Json
-  languagesData Json
-  status DataStatus @default(PENDING)
-  lastFetchedAt DateTime?
+  id        String   @id
+  address   String
+  chainType String
+  chainId   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model GithubData {
+  id            String     @id @default(uuid())
+  userId        String     @unique
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userInfo      Json
+  repos         Json
+  orgs          Json
+  languagesData Json
+  status        DataStatus @default(PENDING)
+  lastFetchedAt DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model ContractsData {
-  id String @id @default(uuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contracts Json
-  status DataStatus @default(PENDING)
+  id            String     @id @default(uuid())
+  userId        String     @unique
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contracts     Json
+  status        DataStatus @default(PENDING)
   lastFetchedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model OnchainData {
-  id String @id @default(uuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  history Json
-  status DataStatus @default(PENDING)
-  lastFetchedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  contractStats Json
+  id               String     @id @default(uuid())
+  userId           String     @unique
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  history          Json
+  status           DataStatus @default(PENDING)
+  lastFetchedAt    DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  contractStats    Json
   transactionStats Json
-  hackathonData Json?
+  hackathonData    Json?
 }
 
 model UserScore {
-  id String @id @default(uuid())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalScore Float @default(0)
-  metrics Json // Stores individual metric scores and calculations
-  status DataStatus @default(PENDING)
-  lastScore Float? @default(0)
+  id               String     @id @default(uuid())
+  userId           String     @unique
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalScore       Float      @default(0)
+  metrics          Json
+  status           DataStatus @default(PENDING)
+  lastScore        Float?     @default(0)
   lastCalculatedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 }
 
 model PlatformConfig {
-  id String @id @default(uuid())
-  name String @unique
-  description String?
-  thresholds Json
-  weights Json
-  enabledChains Json
+  id                        String   @id @default(uuid())
+  name                      String   @unique
+  description               String?
+  thresholds                Json
+  weights                   Json
+  enabledChains             Json
   developerWorthMultipliers Json
-  cryptoRepos Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  cryptoRepos               Json?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 }
 
 model DeveloperWorth {
-    id              String   @id @default(cuid())
-    userId          String   @unique
-    totalWorth      Float
-    breakdown       Json
-    details         Json
-    lastWorth Float? @default(0)
-    lastCalculatedAt DateTime
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  totalWorth       Float
+  breakdown        Json
+  details          Json
+  lastWorth        Float?   @default(0)
+  lastCalculatedAt DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
 
-    user            User     @relation(fields: [userId], references: [id])
-
-    @@index([userId])
+  @@index([userId])
 }
 
+// Organization model
 model Organization {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  logoUrl     String?
-  website     String?
-  contactEmail String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String             @id @default(uuid())
+  name            String             @unique
+  description     String?
+  logoUrl         String?
+  website         String?
+  contactEmail    String?
+  ownerId         String
+  status          OrganizationStatus @default(PENDING)
+  rejectionReason String?
+  owner           OrganizationUser   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members         OrganizationMember[]
+  forms           Form[]
+  lists           UserList[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([ownerId])
 }
 
+// Organization membership model
+model OrganizationMember {
+  id               String           @id @default(uuid())
+  organizationId   String
+  organizationUserId String
+  role             MemberRole       @default(MEMBER)
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationUser OrganizationUser @relation(fields: [organizationUserId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([organizationId, organizationUserId])
+  @@index([organizationId])
+  @@index([organizationUserId])
+}
+
+// Form model for dynamic forms
+model Form {
+  id             String           @id @default(uuid())
+  title          String
+  description    String?
+  organizationId String
+  creatorId      String
+  isActive       Boolean          @default(true)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator        OrganizationUser @relation("FormCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  fields         FormField[]
+  responses      FormResponse[]
+  lists          UserList[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId])
+  @@index([creatorId])
+}
+
+// Form field model for dynamic field creation
+model FormField {
+  id          String         @id @default(uuid())
+  formId      String
+  label       String
+  question    String
+  inputType   FormInputType
+  isRequired  Boolean        @default(false)
+  options     Json?          // For select, checkbox options
+  order       Int
+  form        Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+  responses   FieldResponse[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([formId])
+}
+
+// Form response model
+model FormResponse {
+  id            String          @id @default(uuid())
+  formId        String
+  userId        String
+  walletAddress String?         // For wallet auth
+  githubUsername String?        // For github auth
+  isSelected    Boolean         @default(false) // Track if user is selected in any list
+  form          Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user          User            @relation("FormRespondent", fields: [userId], references: [id], onDelete: Cascade)
+  fieldResponses FieldResponse[]
+  selectedInLists SelectedUser[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([formId, userId]) // One response per user per form
+  @@index([formId])
+  @@index([userId])
+}
+
+// Individual field responses
+model FieldResponse {
+  id             String       @id @default(uuid())
+  formResponseId String
+  fieldId        String
+  value          String       // Store response as string (can be JSON for complex types)
+  formResponse   FormResponse @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+  field          FormField    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([formResponseId, fieldId])
+  @@index([formResponseId])
+  @@index([fieldId])
+}
+
+// User list model for organizing selected users
+model UserList {
+  id             String           @id @default(uuid())
+  name           String
+  description    String?
+  organizationId String
+  formId         String
+  creatorId      String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form           Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  creator        OrganizationUser @relation("ListCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  selectedUsers  SelectedUser[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId])
+  @@index([formId])
+  @@index([creatorId])
+}
+
+// Selected user model to track which users are in which lists
+model SelectedUser {
+  id             String       @id @default(uuid())
+  listId         String
+  userId         String
+  formResponseId String
+  list           UserList     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user           User         @relation("SelectedUser", fields: [userId], references: [id], onDelete: Cascade)
+  formResponse   FormResponse @relation(fields: [formResponseId], references: [id], onDelete: Cascade)
+  selectedAt     DateTime     @default(now())
+
+  @@unique([listId, userId]) // One user can be in a list only once
+  @@index([listId])
+  @@index([userId])
+  @@index([formResponseId])
+}
+
+// Enums
 enum DataStatus {
   PENDING
   PROCESSING
@@ -137,3 +299,30 @@ enum DataStatus {
   FAILED
 }
 
+enum MemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum FormInputType {
+  TEXT
+  EMAIL
+  TEXTAREA
+  SELECT
+  CHECKBOX
+  WALLET_AUTH
+  GITHUB_AUTH
+}
+
+enum UserType {
+  NORMAL
+  ORGANIZATION
+  SUPER_ADMIN
+}
+
+// Add OrganizationStatus enum
+enum OrganizationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
