@@ -10,8 +10,10 @@ import rateLimiter from "@/common/middleware/rateLimiter";
 import requestLogger from "@/common/middleware/requestLogger";
 import { env } from "@/common/utils/envConfig";
 import fbiRouter from "./api/fbi/fbiRouter";
+import orgsRouter from "./api/orgs/organizerRouter"
 import { registerAnalyzeWorkers } from "./api/fbi/queue";
 import { LoadKeys } from "./common/utils/getCreds";
+import cookieParser from "cookie-parser";
 
 const logger = pino({ name: "server start" });
 const app: Express = express();
@@ -22,6 +24,7 @@ const originArray = env.CORS_ORIGIN.split(",");
 
 // Middlewares
 app.use(express.json());
+app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin:function (origin, callback) {
     if (!origin || originArray.includes(origin.trim())) {
@@ -38,6 +41,7 @@ app.use(requestLogger);
 // Routes
 app.use("/health-check", healthCheckRouter);
 app.use("/fbi", fbiRouter);
+app.use("/orgs", orgsRouter)
 
 // Initialize the keys when the module is loaded
 LoadKeys().catch(error => {

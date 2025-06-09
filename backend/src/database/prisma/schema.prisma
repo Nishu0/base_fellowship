@@ -121,13 +121,42 @@ model DeveloperWorth {
 
 model Organization {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String?   @unique
   description String?
   logoUrl     String?
   website     String?
   contactEmail String?
+  privyId String?
+  forms       Form[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Form {
+  id String @id @default(cuid())
+  name String
+  description String
+  formInputs Json
+  deadline DateTime?
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id])
+  submissions FormSubmission[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model FormSubmission {
+   id String @id @default(cuid())
+   email String
+   github String
+   addresses String[]
+   formInputsAnswers Json
+   formId String
+   form Form @relation(fields: [formId], references: [id])
+   status SubmissionStatus
+   createdAt DateTime @default(now())
+   updatedAt DateTime @updatedAt
 }
 
 enum DataStatus {
@@ -137,3 +166,8 @@ enum DataStatus {
   FAILED
 }
 
+
+enum SubmissionStatus {
+  NONE
+  SELECTED
+}

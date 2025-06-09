@@ -22,5 +22,7 @@ export const env = cleanEnv(process.env, {
   GITHUB_ACCESS_TOKEN: str(),
   REDIS_HOST: host({ devDefault: testOnly("localhost") }),
   REDIS_PORT: port({ devDefault: testOnly(6379) }),
-  REDIS_PASSWORD: str({ devDefault: testOnly("") })
+  REDIS_PASSWORD: str({ devDefault: testOnly("") }),
+  PRIVY_APP_ID: str(),
+  PRIVY_APP_SECRET: str()
 });
